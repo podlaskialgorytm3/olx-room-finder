@@ -2,8 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, ExternalLink, ImageOff, MapPin } from "lucide-react";
 import { useOffer } from "@/hooks";
 import { useDistrictStatisticsByName } from "@/hooks";
@@ -17,9 +16,22 @@ import { cn } from "@/lib/utils";
 
 export default function OfferDetailPage() {
   const params = useParams<{ id: string }>();
+  const router = useRouter();
   const { data: offer, isLoading, isError, refetch } = useOffer(params.id);
   const { data: districtStats } = useDistrictStatisticsByName(offer?.district ?? undefined);
   const [activePhoto, setActivePhoto] = useState(0);
+
+  const handleBack = () => {
+    // Wracamy przez historię przeglądarki, żeby przywrócić poprzedni URL
+    // listy ofert razem z zastosowanymi filtrami (query params). Jeśli w tej
+    // karcie nie ma wcześniejszego wpisu w historii (np. wejście z
+    // zewnętrznego linku), wracamy po prostu do listy bez filtrów.
+    if (typeof window !== "undefined" && window.history.length > 1) {
+      router.back();
+    } else {
+      router.push("/offers");
+    }
+  };
 
   if (isLoading) {
     return (
@@ -46,10 +58,8 @@ export default function OfferDetailPage() {
 
   return (
     <div className="mx-auto max-w-4xl space-y-6 px-4 py-8">
-      <Button variant="ghost" asChild className="-ml-2 text-muted-foreground">
-        <Link href="/offers">
-          <ArrowLeft className="size-4" /> Powrót
-        </Link>
+      <Button variant="ghost" onClick={handleBack} className="-ml-2 text-muted-foreground">
+        <ArrowLeft className="size-4" /> Powrót
       </Button>
 
       {/* Gallery */}
