@@ -1,11 +1,11 @@
 """
 Deklaracje tabel SQLAlchemy Core.
 
-Backend NIE tworzy ani nie migruje schematu - właścicielem schematu bazy
-pozostaje `daily_sync.py` (patrz jego funkcja `init_db()`). Poniższe
-deklaracje `Table` służą wyłącznie do budowania zapytań w niezależny od
-dialektu sposób (SQLite dziś, PostgreSQL w przyszłości bez zmian w kodzie
-zapytań).
+Schemat bazy jest tworzony/migrowany przez `backend/services/sync_service.py`
+(funkcja `init_db()`), uruchamiane automatycznie przy starcie backendu.
+Poniższe deklaracje `Table` służą wyłącznie do budowania zapytań w
+niezależny od dialektu sposób (SQLite dziś, PostgreSQL w przyszłości bez
+zmian w kodzie zapytań).
 """
 
 from __future__ import annotations

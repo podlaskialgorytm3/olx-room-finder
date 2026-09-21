@@ -30,3 +30,10 @@ VALUE_SCORE_WEIGHTS = {
 # Minimalna liczba ofert w dzielnicy, żeby uznać medianę/MAD za wiarygodne
 # (poniżej tego progu statystyki dzielnicy są zbyt niestabilne).
 MIN_DISTRICT_SAMPLE_SIZE = 5
+
+# Czy backend ma automatycznie uruchamiać w tle harmonogram codziennej
+# synchronizacji ofert OLX (patrz backend/services/sync_service.py). Wyłącz
+# ustawiając zmienną środowiskową ENABLE_SYNC_SCHEDULER=false (np. w testach).
+ENABLE_SYNC_SCHEDULER = os.environ.get("ENABLE_SYNC_SCHEDULER", "true").strip().lower() in (
+    "1", "true", "yes", "on",
+)

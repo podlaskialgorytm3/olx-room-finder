@@ -1,21 +1,43 @@
 """
 Punkt wejścia backendu REST API.
 
-Backend jest wyłącznie warstwą odczytu/analizy nad `data.db` - nie wykonuje
-scrapingu ani synchronizacji (tym nadal zajmuje się `daily_sync.py`).
+Backend to jeden, spójny system: obsługuje zarówno REST API (odczyt/analiza
+danych) jak i synchronizację ofert OLX z bazą `data.db` (dawniej osobny
+skrypt `daily_sync.py`, obecnie `backend/services/sync_service.py`). Przy
+starcie procesu backend inicjalizuje bazę danych i uruchamia w tle
+harmonogram codziennej synchronizacji; synchronizację można też wyzwolić
+ręcznie przez `POST /api/sync/run`.
 """
 
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from backend.routers import analysis, offers, statistics
+from backend.config import ENABLE_SYNC_SCHEDULER
+from backend.routers import analysis, offers, statistics, sync
+from backend.services import sync_service
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    sync_service.init_db()
+    if ENABLE_SYNC_SCHEDULER:
+        sync_service.start_background_scheduler()
+    yield
+
 
 app = FastAPI(
     title="OLX Room Finder API",
-    description="Warstwa analityczna nad danymi ofert OLX zebranymi przez daily_sync.py.",
+    description=(
+        "Jeden backend łączący REST API (odczyt/analiza ofert) z usługą "
+        "synchronizacji ofert OLX z bazą danych."
+    ),
     version="1.0.0",
+    lifespan=lifespan,
 )
 
 app.add_middleware(
@@ -28,6 +50,7 @@ app.add_middleware(
 app.include_router(offers.router)
 app.include_router(statistics.router)
 app.include_router(analysis.router)
+app.include_router(sync.router)
 
 
 @app.get("/api/health", tags=["health"])
