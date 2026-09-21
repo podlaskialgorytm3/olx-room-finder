@@ -76,8 +76,9 @@ def _district_stats(repo: OfferRepository, filters: OfferFilters, district: str)
 
 
 def price_distribution(repo: OfferRepository, filters: OfferFilters, bin_size: float) -> list[dict]:
-    prices = repo.values_for_filters(filters, "price")
-    return stats_math.make_histogram(prices, bin_size)
+    prices = _prices_with_additional_cost(repo, filters)
+    clean_prices = stats_math.exclude_extreme_outliers(prices)
+    return stats_math.make_histogram(clean_prices, bin_size)
 
 
 def deposits_stats(repo: OfferRepository, filters: OfferFilters) -> dict:
