@@ -18,13 +18,14 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend.config import ENABLE_SYNC_SCHEDULER
-from backend.routers import analysis, offers, statistics, sync
-from backend.services import sync_service
+from backend.routers import admin, analysis, auth, offers, statistics, sync
+from backend.services import auth_service, sync_service
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     sync_service.init_db()
+    auth_service.ensure_default_admin()
     if ENABLE_SYNC_SCHEDULER:
         sync_service.start_background_scheduler()
     yield
@@ -51,6 +52,8 @@ app.include_router(offers.router)
 app.include_router(statistics.router)
 app.include_router(analysis.router)
 app.include_router(sync.router)
+app.include_router(auth.router)
+app.include_router(admin.router)
 
 
 @app.get("/api/health", tags=["health"])

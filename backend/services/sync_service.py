@@ -46,7 +46,7 @@ import threading
 import time
 from contextlib import closing
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Optional
 from urllib.parse import urljoin, urlparse, urlsplit, urlunsplit
@@ -61,7 +61,25 @@ from backend.config import BASE_DIR
 # ==========================================================================
 
 BASE_URL = "https://www.olx.pl"
-LISTING_URL = f"{BASE_URL}/nieruchomosci/stancje-pokoje/warszawa/"
+LISTING_PATH_TEMPLATE = "/nieruchomosci/stancje-pokoje/{slug}/"
+
+# Miasta obsługiwane przez synchronizację. Klucz to kod miasta zapisywany w
+# kolumnie `offers.city` / `sync_runs.city`, `slug` to fragment ścieżki URL
+# listingu OLX dla danego miasta. Dodanie nowego miasta wymaga tylko wpisu
+# tutaj - reszta (harmonogram, panel administratora, filtrowanie) korzysta
+# z tego słownika automatycznie.
+CITIES: dict[str, dict[str, str]] = {
+    "WARSZAWA": {"display_name": "Warszawa", "slug": "warszawa"},
+    "KRAKOW": {"display_name": "Kraków", "slug": "krakow"},
+    "WROCLAW": {"display_name": "Wrocław", "slug": "wroclaw"},
+    "POZNAN": {"display_name": "Poznań", "slug": "poznan"},
+    "GDANSK": {"display_name": "Gdańsk", "slug": "gdansk"},
+    "LODZ": {"display_name": "Łódź", "slug": "lodz"},
+}
+DEFAULT_CITY = "WARSZAWA"
+
+# Zachowane dla wstecznej kompatybilności (domyślny listing - Warszawa).
+LISTING_URL = f"{BASE_URL}{LISTING_PATH_TEMPLATE.format(slug=CITIES[DEFAULT_CITY]['slug'])}"
 
 DB_FILE = str(BASE_DIR / "data.db")
 LEGACY_CSV_FILE = str(BASE_DIR / "data.csv")  # do jednorazowej migracji, jeśli baza jeszcze nie istnieje
@@ -285,20 +303,28 @@ def parse_offers(html: str) -> list[RoomOffer]:
     return offers
 
 
-def build_page_url(page_number: int) -> str:
+def build_listing_url(city: str = DEFAULT_CITY) -> str:
+    city_info = CITIES.get(city)
+    if city_info is None:
+        raise ValueError(f"Nieznane miasto: {city!r}")
+    return f"{BASE_URL}{LISTING_PATH_TEMPLATE.format(slug=city_info['slug'])}"
+
+
+def build_page_url(page_number: int, city: str = DEFAULT_CITY) -> str:
+    listing_url = build_listing_url(city)
     if page_number == 1:
-        return LISTING_URL
-    return f"{LISTING_URL}?page={page_number}"
+        return listing_url
+    return f"{listing_url}?page={page_number}"
 
 
-def fetch_all_offers() -> tuple[list[RoomOffer], int]:
-    html = fetch_html(LISTING_URL)
+def fetch_all_offers(city: str = DEFAULT_CITY) -> tuple[list[RoomOffer], int]:
+    html = fetch_html(build_listing_url(city))
     soup = BeautifulSoup(html, "html.parser")
     max_page = get_max_page_number(soup)
     offers = parse_offers(html)
 
     for page_number in range(2, max_page + 1):
-        page_html = fetch_html(build_page_url(page_number))
+        page_html = fetch_html(build_page_url(page_number, city))
         offers.extend(parse_offers(page_html))
 
     return offers, max_page
@@ -726,12 +752,39 @@ CREATE INDEX IF NOT EXISTS idx_history_recorded_at ON offer_history(recorded_at)
 -- z samej tabeli `offers`, bo usunięte wiersze znikają).
 CREATE TABLE IF NOT EXISTS sync_runs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
+    city TEXT NOT NULL DEFAULT 'WARSZAWA',
     started_at TEXT NOT NULL,
     finished_at TEXT,
     offers_seen INTEGER,
     offers_added INTEGER,
     offers_removed INTEGER,
     max_page INTEGER
+);
+
+-- Konfiguracja synchronizacji per-miasto (godzina/minuta codziennego
+-- uruchomienia) - edytowalna z panelu administratora.
+CREATE TABLE IF NOT EXISTS city_configs (
+    city TEXT PRIMARY KEY,
+    display_name TEXT NOT NULL,
+    sync_hour INTEGER NOT NULL DEFAULT 2,
+    sync_minute INTEGER NOT NULL DEFAULT 0
+);
+
+-- Konta administratorów panelu (na start jedno konto: admin/admin).
+CREATE TABLE IF NOT EXISTS admin_users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT NOT NULL UNIQUE,
+    password_hash TEXT NOT NULL,
+    salt TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Aktywne sesje (tokeny) zalogowanych administratorów.
+CREATE TABLE IF NOT EXISTS admin_sessions (
+    token TEXT PRIMARY KEY,
+    username TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    expires_at TEXT NOT NULL
 );
 """
 
@@ -770,8 +823,61 @@ def init_db() -> None:
     with closing(get_connection()) as conn:
         conn.executescript(SCHEMA)
         _migrate_add_city_column(conn)
+        _migrate_add_city_to_sync_runs(conn)
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_sync_runs_city ON sync_runs(city)")
         conn.commit()
     migrate_legacy_csv_if_needed()
+    ensure_city_configs()
+
+
+def _migrate_add_city_to_sync_runs(conn: sqlite3.Connection) -> None:
+    """Migracja dla baz utworzonych przed dodaniem kolumny `city` do `sync_runs`."""
+    existing_columns = {row[1] for row in conn.execute("PRAGMA table_info(sync_runs)").fetchall()}
+    if "city" not in existing_columns:
+        conn.execute(f"ALTER TABLE sync_runs ADD COLUMN city TEXT NOT NULL DEFAULT '{DEFAULT_CITY}'")
+
+
+def ensure_city_configs() -> None:
+    """Zakłada wiersz w `city_configs` dla każdego miasta z `CITIES`, jeśli
+    jeszcze go tam nie ma (domyślna godzina synchronizacji: RUN_HOUR:RUN_MINUTE)."""
+    with closing(get_connection()) as conn:
+        existing = {row[0] for row in conn.execute("SELECT city FROM city_configs").fetchall()}
+        for code, info in CITIES.items():
+            if code in existing:
+                continue
+            conn.execute(
+                "INSERT INTO city_configs (city, display_name, sync_hour, sync_minute) VALUES (?, ?, ?, ?)",
+                (code, info["display_name"], RUN_HOUR, RUN_MINUTE),
+            )
+        conn.commit()
+
+
+def get_city_configs() -> list[dict[str, Any]]:
+    with closing(get_connection()) as conn:
+        conn.row_factory = sqlite3.Row
+        rows = conn.execute("SELECT * FROM city_configs ORDER BY display_name").fetchall()
+        return [dict(row) for row in rows]
+
+
+def get_city_config(city: str) -> Optional[dict[str, Any]]:
+    with closing(get_connection()) as conn:
+        conn.row_factory = sqlite3.Row
+        row = conn.execute("SELECT * FROM city_configs WHERE city = ?", (city,)).fetchone()
+        return dict(row) if row else None
+
+
+def update_city_sync_hour(city: str, sync_hour: int, sync_minute: int) -> Optional[dict[str, Any]]:
+    """Aktualizuje godzinę/minutę codziennej synchronizacji dla danego miasta.
+    Zwraca zaktualizowaną konfigurację albo None, jeśli miasto nie istnieje."""
+    with closing(get_connection()) as conn:
+        cursor = conn.execute(
+            "UPDATE city_configs SET sync_hour = ?, sync_minute = ? WHERE city = ?",
+            (sync_hour, sync_minute, city),
+        )
+        conn.commit()
+        if cursor.rowcount == 0:
+            return None
+    return get_city_config(city)
 
 
 def _migrate_add_city_column(conn: sqlite3.Connection) -> None:
@@ -847,9 +953,9 @@ def migrate_legacy_csv_if_needed() -> None:
         logger.info("Zmigrowano %d rekordów z %s do %s.", total, LEGACY_CSV_FILE, DB_FILE)
 
 
-def get_existing_ids() -> set[str]:
+def get_existing_ids(city: str = DEFAULT_CITY) -> set[str]:
     with closing(get_connection()) as conn:
-        rows = conn.execute("SELECT id FROM offers").fetchall()
+        rows = conn.execute("SELECT id FROM offers WHERE city = ?", (city,)).fetchall()
     return {row[0] for row in rows}
 
 
@@ -861,8 +967,9 @@ def _record_history(conn: sqlite3.Connection, offer_id: str, district: Any, pric
     )
 
 
-def delete_offers(ids: set[str]) -> int:
-    """Usuwa z bazy rekordy o podanych ID (zniknęły z OLX). Zwraca liczbę usuniętych wierszy.
+def delete_offers(ids: set[str], city: str = DEFAULT_CITY) -> int:
+    """Usuwa z bazy rekordy o podanych ID (zniknęły z OLX) dla danego miasta.
+    Zwraca liczbę usuniętych wierszy.
 
     Przed usunięciem zapisuje snapshot oferty (event='removed') do
     `offer_history` - to jedyny moment, w którym dane o znikającej ofercie
@@ -873,24 +980,27 @@ def delete_offers(ids: set[str]) -> int:
     with closing(get_connection()) as conn:
         placeholders = ", ".join(["?"] * len(ids))
         rows_to_remove = conn.execute(
-            f"SELECT id, district, price, total_monthly_cost FROM offers WHERE id IN ({placeholders})",
-            tuple(ids),
+            f"SELECT id, district, price, total_monthly_cost FROM offers "
+            f"WHERE id IN ({placeholders}) AND city = ?",
+            (*ids, city),
         ).fetchall()
         for offer_id, district, price, total_monthly_cost in rows_to_remove:
             _record_history(conn, offer_id, district, price, total_monthly_cost, event="removed")
 
-        cursor = conn.execute(f"DELETE FROM offers WHERE id IN ({placeholders})", tuple(ids))
+        cursor = conn.execute(
+            f"DELETE FROM offers WHERE id IN ({placeholders}) AND city = ?", (*ids, city)
+        )
         conn.commit()
         return cursor.rowcount
 
 
-def insert_offer(row: dict[str, Any]) -> None:
+def insert_offer(row: dict[str, Any], city: str = DEFAULT_CITY) -> None:
     """Wstawia jeden nowy, kompletny rekord ogłoszenia do bazy i zapisuje
     zdarzenie 'created' w historii."""
     values = (
         row["id"],
         row["title"],
-        "WARSZAWA",
+        city,
         row["district"],
         _to_number(row.get("price")),
         _parse_bool(row.get("negotiable")),
@@ -915,10 +1025,10 @@ def insert_offer(row: dict[str, Any]) -> None:
         conn.commit()
 
 
-def start_sync_run(started_at: str) -> int:
+def start_sync_run(started_at: str, city: str = DEFAULT_CITY) -> int:
     with closing(get_connection()) as conn:
         cursor = conn.execute(
-            "INSERT INTO sync_runs (started_at) VALUES (?)", (started_at,)
+            "INSERT INTO sync_runs (city, started_at) VALUES (?, ?)", (city, started_at)
         )
         conn.commit()
         return cursor.lastrowid
@@ -934,16 +1044,23 @@ def finish_sync_run(run_id: int, offers_seen: int, offers_added: int, offers_rem
         conn.commit()
 
 
-def count_offers() -> int:
+def count_offers(city: Optional[str] = None) -> int:
     with closing(get_connection()) as conn:
+        if city:
+            return conn.execute("SELECT COUNT(*) FROM offers WHERE city = ?", (city,)).fetchone()[0]
         return conn.execute("SELECT COUNT(*) FROM offers").fetchone()[0]
 
 
-def get_last_run() -> Optional[dict[str, Any]]:
-    """Zwraca ostatni wpis z `sync_runs` (dla endpointu /api/sync/status)."""
+def get_last_run(city: Optional[str] = None) -> Optional[dict[str, Any]]:
+    """Zwraca ostatni wpis z `sync_runs` (dla endpointu /api/sync/status), opcjonalnie filtrowany po mieście."""
     with closing(get_connection()) as conn:
         conn.row_factory = sqlite3.Row
-        row = conn.execute("SELECT * FROM sync_runs ORDER BY id DESC LIMIT 1").fetchone()
+        if city:
+            row = conn.execute(
+                "SELECT * FROM sync_runs WHERE city = ? ORDER BY id DESC LIMIT 1", (city,)
+            ).fetchone()
+        else:
+            row = conn.execute("SELECT * FROM sync_runs ORDER BY id DESC LIMIT 1").fetchone()
         return dict(row) if row else None
 
 
@@ -994,41 +1111,41 @@ def build_full_row(offer: RoomOffer) -> dict[str, Any]:
 # SYNCHRONIZACJA
 # ==========================================================================
 
-def sync_once() -> None:
-    logger.info("Start synchronizacji z OLX -> baza %s", DB_FILE)
+def sync_once(city: str = DEFAULT_CITY) -> None:
+    logger.info("Start synchronizacji z OLX (miasto=%s) -> baza %s", city, DB_FILE)
     init_db()
 
     run_started_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    run_id = start_sync_run(run_started_at)
+    run_id = start_sync_run(run_started_at, city)
 
     try:
-        current_offers, max_page = fetch_all_offers()
+        current_offers, max_page = fetch_all_offers(city)
     except Exception as exc:  # noqa: BLE001
-        logger.error("Nie udało się pobrać listy ogłoszeń z OLX: %s", exc)
+        logger.error("Nie udało się pobrać listy ogłoszeń z OLX (miasto=%s): %s", city, exc)
         finish_sync_run(run_id, offers_seen=0, offers_added=0, offers_removed=0, max_page=0)
         return
 
     current_by_id = {offer.id: offer for offer in current_offers}
     current_ids = set(current_by_id.keys())
-    logger.info("Pobrano %d ogłoszeń z %d stron OLX.", len(current_offers), max_page)
+    logger.info("Pobrano %d ogłoszeń z %d stron OLX (miasto=%s).", len(current_offers), max_page, city)
 
-    existing_ids = get_existing_ids()
+    existing_ids = get_existing_ids(city)
 
     ids_to_remove = existing_ids - current_ids
     ids_to_add = current_ids - existing_ids
 
     logger.info(
-        "Do usunięcia: %d ogłoszeń, do dodania: %d ogłoszeń.",
-        len(ids_to_remove), len(ids_to_add),
+        "Do usunięcia: %d ogłoszeń, do dodania: %d ogłoszeń (miasto=%s).",
+        len(ids_to_remove), len(ids_to_add), city,
     )
 
-    removed_count = delete_offers(ids_to_remove)
+    removed_count = delete_offers(ids_to_remove, city)
 
     new_ids_list = sorted(ids_to_add)
     added_count = 0
     for index, offer_id in enumerate(new_ids_list):
         offer = current_by_id[offer_id]
-        logger.info("Pobieranie nowego ogłoszenia %d/%d (id=%s)", index + 1, len(new_ids_list), offer_id)
+        logger.info("Pobieranie nowego ogłoszenia %d/%d (id=%s, miasto=%s)", index + 1, len(new_ids_list), offer_id, city)
 
         if index > 0:
             time.sleep(NEW_OFFER_REQUEST_DELAY_SECONDS)
@@ -1042,12 +1159,12 @@ def sync_once() -> None:
         # Pojedynczy INSERT od razu po pobraniu - żaden nowy rekord nie ginie
         # w razie przerwania synchronizacji w połowie, a tabela nie jest
         # nigdy przepisywana w całości.
-        insert_offer(row)
+        insert_offer(row, city)
         added_count += 1
 
     logger.info(
-        "Zakończono synchronizację. Usunięto: %d, dodano: %d, łącznie w bazie: %d.",
-        removed_count, added_count, count_offers(),
+        "Zakończono synchronizację miasta=%s. Usunięto: %d, dodano: %d, łącznie w bazie (to miasto): %d.",
+        city, removed_count, added_count, count_offers(city),
     )
     finish_sync_run(
         run_id,
@@ -1062,62 +1179,79 @@ def sync_once() -> None:
 # HARMONOGRAM I ORKIESTRACJA W TLE (uruchamiane przez proces API)
 # ==========================================================================
 
-_sync_lock = threading.Lock()
+_sync_locks: dict[str, threading.Lock] = {}
+_locks_guard = threading.Lock()
 _scheduler_lock = threading.Lock()
 _scheduler_started = False
 
+# Częstotliwość sprawdzania harmonogramu per-miasto (w sekundach). Sprawdzanie
+# co minutę wystarcza, bo granulacja godziny synchronizacji to godzina:minuta.
+SCHEDULER_POLL_INTERVAL_SECONDS = 30
 
-def is_sync_running() -> bool:
-    return _sync_lock.locked()
+
+def _get_city_lock(city: str) -> threading.Lock:
+    with _locks_guard:
+        if city not in _sync_locks:
+            _sync_locks[city] = threading.Lock()
+        return _sync_locks[city]
 
 
-def _run_sync_guarded() -> None:
-    """Uruchamia sync_once() pod ochroną blokady, żeby zaplanowana
-    synchronizacja i ręczne wyzwolenie z API nigdy nie nachodziły na siebie."""
-    if not _sync_lock.acquire(blocking=False):
-        logger.info("Synchronizacja już trwa - pomijam to wywołanie.")
+def is_sync_running(city: Optional[str] = None) -> bool:
+    if city:
+        return _get_city_lock(city).locked()
+    with _locks_guard:
+        return any(lock.locked() for lock in _sync_locks.values())
+
+
+def _run_sync_guarded(city: str = DEFAULT_CITY) -> None:
+    """Uruchamia sync_once(city) pod ochroną per-miastowej blokady, żeby
+    zaplanowana synchronizacja i ręczne wyzwolenie z API nigdy nie nachodziły
+    na siebie dla tego samego miasta (różne miasta mogą synchronizować się
+    równolegle)."""
+    lock = _get_city_lock(city)
+    if not lock.acquire(blocking=False):
+        logger.info("Synchronizacja miasta=%s już trwa - pomijam to wywołanie.", city)
         return
     try:
-        sync_once()
+        sync_once(city)
     except Exception:  # noqa: BLE001
-        logger.exception("Niespodziewany błąd podczas synchronizacji.")
+        logger.exception("Niespodziewany błąd podczas synchronizacji miasta=%s.", city)
     finally:
-        _sync_lock.release()
+        lock.release()
 
 
-def trigger_manual_sync() -> bool:
-    """Uruchamia synchronizację natychmiast, w osobnym wątku (nieblokująco).
+def trigger_manual_sync(city: str = DEFAULT_CITY) -> bool:
+    """Uruchamia synchronizację danego miasta natychmiast, w osobnym wątku
+    (nieblokująco).
 
-    Zwraca False, jeśli inna synchronizacja już trwa (nic nowego nie
+    Zwraca False, jeśli synchronizacja tego miasta już trwa (nic nowego nie
     uruchomiono), True jeśli nowa synchronizacja została wystartowana.
     """
-    if _sync_lock.locked():
+    if city not in CITIES:
+        raise ValueError(f"Nieznane miasto: {city!r}")
+    if _get_city_lock(city).locked():
         return False
-    thread = threading.Thread(target=_run_sync_guarded, daemon=True, name="olx-sync-manual")
+    thread = threading.Thread(target=_run_sync_guarded, args=(city,), daemon=True, name=f"olx-sync-manual-{city}")
     thread.start()
     return True
 
 
-def seconds_until_next_run(now: datetime | None = None) -> float:
-    now = now or datetime.now()
-    target = now.replace(hour=RUN_HOUR, minute=RUN_MINUTE, second=0, microsecond=0)
-    if target <= now:
-        target += timedelta(days=1)
-    return (target - now).total_seconds()
-
-
 def _run_forever_loop() -> None:
-    logger.info("Uruchomiono harmonogram synchronizacji (godzina uruchamiania: %02d:%02d).", RUN_HOUR, RUN_MINUTE)
+    logger.info("Uruchomiono harmonogram synchronizacji (konfiguracja godzin per-miasto w tabeli city_configs).")
+    last_triggered_at: dict[str, str] = {}
     while True:
-        wait_seconds = seconds_until_next_run()
-        next_run_at = datetime.now() + timedelta(seconds=wait_seconds)
-        logger.info("Następna synchronizacja o %s (za %.1f h).", next_run_at.strftime("%Y-%m-%d %H:%M"), wait_seconds / 3600)
-        time.sleep(wait_seconds)
-
-        _run_sync_guarded()
-
-        # Krótka przerwa, żeby uniknąć ponownego odpalenia w tej samej minucie.
-        time.sleep(60)
+        now = datetime.now()
+        current_minute_key = now.strftime("%Y-%m-%d %H:%M")
+        for config in get_city_configs():
+            city = config["city"]
+            if now.hour == config["sync_hour"] and now.minute == config["sync_minute"]:
+                if last_triggered_at.get(city) == current_minute_key:
+                    continue
+                last_triggered_at[city] = current_minute_key
+                logger.info("Harmonogram: uruchamiam synchronizację miasta=%s (%02d:%02d).", city, config["sync_hour"], config["sync_minute"])
+                thread = threading.Thread(target=_run_sync_guarded, args=(city,), daemon=True, name=f"olx-sync-scheduled-{city}")
+                thread.start()
+        time.sleep(SCHEDULER_POLL_INTERVAL_SECONDS)
 
 
 def start_background_scheduler() -> None:

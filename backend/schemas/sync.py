@@ -7,6 +7,7 @@ from pydantic import BaseModel
 
 class SyncRunOut(BaseModel):
     id: int
+    city: Optional[str] = None
     started_at: str
     finished_at: Optional[str] = None
     offers_seen: Optional[int] = None
