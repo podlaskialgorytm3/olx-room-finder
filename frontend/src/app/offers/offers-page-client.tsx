@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { MapPin } from "lucide-react";
+import { HelpCircle, MapPin, X } from "lucide-react";
 import { SearchBar } from "@/components/filters/search-bar";
 import { DistrictSelect } from "@/components/filters/district-select";
 import { RangeSliderField } from "@/components/filters/range-slider-field";
@@ -12,10 +12,11 @@ import { SortSelect } from "@/components/offers/sort-select";
 import { PaginationControls } from "@/components/offers/pagination-controls";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useOffers } from "@/hooks";
 import { parseOffersQuery, offersQueryToParams } from "@/lib/url-filters";
 import { PRICE_RANGE, TOTAL_COST_RANGE } from "@/lib/constants";
-import { X } from "lucide-react";
 import type { OffersQuery, SortField, SortOrder } from "@/types";
 
 export function OffersPageClient() {
@@ -95,11 +96,26 @@ export function OffersPageClient() {
                 yesLabel="Wymagana"
                 noLabel="Bez kaucji"
               />
-              <TriStateSelect
-                label="Dodatkowe opłaty"
-                value={query.hasAdditionalCost}
-                onChange={(hasAdditionalCost) => updateQuery({ hasAdditionalCost })}
-              />
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2">
+                  <Switch
+                    id="only-additional-cost-sidebar"
+                    checked={query.hasAdditionalCost === true}
+                    onCheckedChange={(checked) => updateQuery({ hasAdditionalCost: checked ? true : undefined })}
+                  />
+                  <label htmlFor="only-additional-cost-sidebar" className="text-sm font-medium">
+                    Tylko z dodatkowymi dopłatami
+                  </label>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button type="button" className="text-muted-foreground hover:text-foreground" aria-label="Informacja">
+                        <HelpCircle className="size-4" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent>Z tą opcją, będzie możliwość zobaczenia pełnych cen</TooltipContent>
+                  </Tooltip>
+                </div>
+              </div>
               <TriStateSelect
                 label="Negocjacja ceny"
                 value={query.negotiable}

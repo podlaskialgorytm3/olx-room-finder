@@ -1,9 +1,11 @@
 "use client";
 
-import { SlidersHorizontal, X } from "lucide-react";
+import { HelpCircle, SlidersHorizontal, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetFooter } from "@/components/ui/sheet";
+import { Switch } from "@/components/ui/switch";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { DistrictSelect } from "./district-select";
 import { RangeSliderField } from "./range-slider-field";
 import { TriStateSelect } from "./tri-state-select";
@@ -76,6 +78,25 @@ export function QuickFilterBar({ filters, onChange, onClear, activeCount }: Quic
         </PopoverContent>
       </Popover>
 
+      <div className="flex items-center gap-2 rounded-md border border-input bg-background px-3 py-2">
+        <Switch
+          id="only-additional-cost"
+          checked={filters.hasAdditionalCost === true}
+          onCheckedChange={(checked) => onChange({ hasAdditionalCost: checked ? true : undefined })}
+        />
+        <label htmlFor="only-additional-cost" className="text-sm font-medium">
+          Tylko z dodatkowymi dopłatami
+        </label>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button type="button" className="text-muted-foreground hover:text-foreground" aria-label="Informacja">
+              <HelpCircle className="size-4" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent>Z tą opcją, będzie możliwość zobaczenia pełnych cen</TooltipContent>
+        </Tooltip>
+      </div>
+
       <Sheet>
         <SheetTrigger asChild>
           <Button variant="outline">
@@ -105,13 +126,6 @@ export function QuickFilterBar({ filters, onChange, onClear, activeCount }: Quic
               onChange={(hasDepositCost) => onChange({ hasDepositCost })}
               yesLabel="Podana"
               noLabel="Nieznana"
-            />
-            <TriStateSelect
-              label="Dodatkowe opłaty"
-              value={filters.hasAdditionalCost}
-              onChange={(hasAdditionalCost) => onChange({ hasAdditionalCost })}
-              yesLabel="Tak"
-              noLabel="Nie"
             />
             <TriStateSelect
               label="Negocjacja ceny"
