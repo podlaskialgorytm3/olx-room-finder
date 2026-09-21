@@ -48,10 +48,12 @@ export function OfferCard({ offer }: { offer: Offer }) {
               <span className="text-xs text-muted-foreground">+ {formatPln(offer.additional_cost)} opłat</span>
             )}
           </div>
-          <div className="flex items-baseline justify-between border-t border-dashed pt-1 text-sm">
-            <span className="text-muted-foreground">Miesięcznie</span>
-            <span className="font-semibold text-foreground">{formatPln(offer.total_monthly_cost)}</span>
-          </div>
+          {offer.total_monthly_cost !== null && offer.total_monthly_cost !== undefined && (
+            <div className="flex items-baseline justify-between border-t border-dashed pt-1 text-sm">
+              <span className="text-muted-foreground">Miesięcznie</span>
+              <span className="font-semibold text-foreground">{formatPln(offer.total_monthly_cost)}</span>
+            </div>
+          )}
         </div>
 
         <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">

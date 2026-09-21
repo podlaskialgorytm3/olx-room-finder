@@ -93,7 +93,9 @@ export default function OfferDetailPage() {
         <h1 className="text-2xl font-semibold">{offer.title}</h1>
         <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
           <span className="text-3xl font-bold">{formatPln(offer.price)}</span>
-          <span className="text-lg text-muted-foreground">{formatPln(offer.total_monthly_cost)} całkowity koszt</span>
+          {offer.total_monthly_cost !== null && offer.total_monthly_cost !== undefined && (
+            <span className="text-lg text-muted-foreground">{formatPln(offer.total_monthly_cost)} całkowity koszt</span>
+          )}
         </div>
         <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
           {offer.district && (
@@ -108,7 +110,9 @@ export default function OfferDetailPage() {
       {/* Key facts */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <Fact label="Kaucja" value={offer.has_deposit === false ? "Brak" : formatPln(offer.deposit)} />
-        <Fact label="Dodatkowe opłaty" value={offer.has_additional_cost === false ? "Brak" : formatPln(offer.additional_cost)} />
+        {offer.has_additional_cost !== null && offer.has_additional_cost !== undefined && (
+          <Fact label="Dodatkowe opłaty" value={offer.has_additional_cost === false ? "Brak" : formatPln(offer.additional_cost)} />
+        )}
         <Fact label="Negocjowalna" value={formatTriState(offer.negotiable)} />
       </div>
 
