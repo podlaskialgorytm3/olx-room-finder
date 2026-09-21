@@ -46,12 +46,15 @@ changing `DATABASE_URL`.
 | `backend/services/statistics_service.py` | Descriptive statistics (overview, per-district, price histogram, deposits, additional costs, negotiability). |
 | `backend/services/analysis_service.py` | Dynamically computed analyses: price vs. district median, initial cost (deposit + total cost), district comparison, outliers (IQR), cost distribution, **value_score** (robust z-score on district median/MAD — see the `value_score()` docstring). |
 | `backend/services/stats_math.py` | Pure statistical functions with no DB/framework dependency: `safe_median/mean/min/max`, `percentile`, `iqr_bounds`, `median_absolute_deviation`, `robust_z_score`, `make_histogram`. Easy to unit test. |
-| `backend/services/sync_service.py` | **All scraping + AI + persistence logic.** Sections: listing/description scraping (formerly `main.py`), AI analysis via Ollama (formerly `room_analysis.py`, including `create_prompt` with the full model instructions), photo scraping (formerly `fetch_photos.py`), the DB layer (raw `sqlite3`, `SCHEMA`, `init_db`, `insert_offer`, `delete_offers`, event history), `sync_once()` (one full run), the scheduler (`start_background_scheduler`, `_run_forever_loop` — daily at 2:00 AM) and manual triggering (`trigger_manual_sync`, guarded by a `threading.Lock` so the scheduler and a manual trigger never overlap). |
+| `backend/services/sync_service.py` | **All scraping + AI + persistence logic.** Sections: listing/description scraping (formerly `main.py`), AI analysis via Ollama (formerly `room_analysis.py`, including `create_prompt` with the full model instructions), photo scraping (formerly `fetch_photos.py`), the DB layer (raw `sqlite3`, `SCHEMA`, `init_db`, `insert_offer`, `delete_offers`, event history), `sync_once(city)` (one full run **for a given city**), per-city configuration (`CITIES`, `get_city_configs`, `update_city_sync_hour`), the scheduler (`start_background_scheduler`, `_run_forever_loop` — polls `city_configs` every 30s and triggers each city at its configured hour:minute) and manual triggering (`trigger_manual_sync(city)`, guarded by a per-city `threading.Lock` so the scheduler and a manual trigger never overlap **for the same city**; different cities may sync concurrently). |
+| `backend/services/auth_service.py` | Admin panel authentication: PBKDF2-HMAC-SHA256 password hashing (stdlib `hashlib`, no extra dependency), opaque session tokens stored in `admin_sessions` (server-side sessions, no JWT). `ensure_default_admin()` seeds `admin`/`admin` on first startup. |
 | `backend/routers/offers.py` | `GET /api/offers`, `GET /api/offers/{id}`. |
 | `backend/routers/statistics.py` | `GET /api/statistics/*`. |
 | `backend/routers/analysis.py` | `GET /api/analysis/*`. |
-| `backend/routers/sync.py` | `GET /api/sync/status`, `POST /api/sync/run`. |
-| `backend/schemas/*.py` | Pydantic response models per module (`offer.py`, `statistics.py`, `analysis.py`, `sync.py`). |
+| `backend/routers/sync.py` | `GET /api/sync/status`, `POST /api/sync/run` (backward-compatible, city-agnostic/default-city endpoints). |
+| `backend/routers/auth.py` | `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me`. |
+| `backend/routers/admin.py` | `GET /api/admin/cities`, `PATCH /api/admin/cities/{city}`, `POST /api/admin/cities/{city}/sync` — all protected by `require_admin`. |
+| `backend/schemas/*.py` | Pydantic response models per module (`offer.py`, `statistics.py`, `analysis.py`, `sync.py`, `auth.py`, `admin.py`). |
 
 ## 3. Database structure (SQLite, `data.db`)
 
@@ -97,10 +100,27 @@ known state).
 
 ### `sync_runs` (sync run log)
 
-`id, started_at, finished_at, offers_seen, offers_added, offers_removed, max_page`
+`id, city, started_at, finished_at, offers_seen, offers_added, offers_removed, max_page`
 
-One row per `sync_once()` execution. Used by `GET /api/sync/status` (latest
-row).
+One row per `sync_once(city)` execution. Used by `GET /api/sync/status` /
+`GET /api/admin/cities` (latest row per city).
+
+### `city_configs` (per-city sync schedule)
+
+`city (PK), display_name, sync_hour, sync_minute`
+
+One row per entry in `sync_service.CITIES` (auto-seeded by
+`ensure_city_configs()`, default `02:00`). Edited via
+`PATCH /api/admin/cities/{city}` from the admin dashboard.
+
+### `admin_users` / `admin_sessions` (admin panel auth)
+
+- `admin_users`: `id, username, password_hash, salt, created_at` — PBKDF2-HMAC-SHA256
+  hashed passwords (see `auth_service.py`). Seeded with `admin`/`admin` on
+  first startup by `ensure_default_admin()`.
+- `admin_sessions`: `token (PK), username, created_at, expires_at` — opaque
+  session tokens (12h TTL), checked by the `require_admin` FastAPI dependency
+  on every `/api/admin/*` request via `Authorization: Bearer <token>`.
 
 ## 4. API endpoints
 
@@ -146,37 +166,69 @@ also used by `/statistics` and `/analysis`):
 ### Sync — `backend/routers/sync.py` (prefix `/api/sync`)
 
 - `GET /status` → `SyncStatusOut { running: bool, offers_count: int, last_run: SyncRunOut | null }`.
-- `POST /run` → starts `sync_once()` in a separate thread, returns **202**
-  `{"status": "started"}`, or **409** if a sync is already running (guarded by
-  a `threading.Lock` in `sync_service`).
+  Backward-compatible, city-agnostic: aggregates across all cities.
+- `POST /run` → starts `sync_once()` for the default city (`WARSZAWA`) in a
+  separate thread, returns **202** `{"status": "started"}`, or **409** if a
+  sync for that city is already running.
+
+### Auth — `backend/routers/auth.py` (prefix `/api/auth`)
+
+- `POST /login` `{username, password}` → `LoginOut {token, username, expires_at}`,
+  or **401** on bad credentials. Default account: `admin` / `admin` (change via
+  `auth_service.change_password()`).
+- `POST /logout` (needs `Authorization: Bearer <token>`) → **204**, invalidates the token.
+- `GET /me` (needs auth) → `{"username": "..."}`.
+
+### Admin — `backend/routers/admin.py` (prefix `/api/admin`, all endpoints require `Authorization: Bearer <token>`)
+
+- `GET /cities` → `CityConfigOut[]` — one entry per city in `sync_service.CITIES`
+  with its configured `sync_hour`/`sync_minute`, `offers_count`, `running` flag
+  and `last_run`.
+- `PATCH /cities/{city}` `{sync_hour, sync_minute}` → updates that city's daily
+  sync schedule (used by the "Panel administratora" dashboard). 404 if the
+  city is unknown.
+- `POST /cities/{city}/sync` → starts `sync_once(city)` in a separate thread
+  (202), or 409 if that city's sync is already running.
 
 ## 5. Sync flow (`sync_service.py`)
 
 1. `init_db()` — creates tables (idempotently, `CREATE TABLE IF NOT EXISTS`) +
-   a one-time migration of `data.csv` into SQLite if the database is empty.
-2. `fetch_all_offers()` — fetches every listing page from OLX
-   (`stancje-pokoje/warszawa`), parses cards (`parse_card`) into
+   migrations for existing databases (`city` column on `offers`/`sync_runs`) +
+   a one-time migration of `data.csv` into SQLite if the database is empty +
+   `ensure_city_configs()` (seeds `city_configs` for every city in `CITIES`).
+2. `fetch_all_offers(city)` — fetches every listing page from OLX for that
+   city's slug (`sync_service.CITIES[city]["slug"]`, e.g.
+   `stancje-pokoje/warszawa`), parses cards (`parse_card`) into
    `RoomOffer(id, title, district, price, negotiable, link)`.
-3. ID comparison: `existing_ids` (from the DB) vs. `current_ids` (from OLX) →
+3. ID comparison: `existing_ids(city)` (from the DB) vs. `current_ids` (from OLX) →
    `ids_to_remove`, `ids_to_add`.
-4. `delete_offers(ids_to_remove)` — snapshots each row into `offer_history`
+4. `delete_offers(ids_to_remove, city)` — snapshots each row into `offer_history`
    (event=`removed`), then deletes it.
 5. For each new ID: `build_full_row()` fetches the description
    (`fetch_offer_description`), runs the AI analysis (`analyze_listing` →
    prompt sent to the local Ollama `llama3.2:3b` model, with retries and field
    validation), fetches photos (`fetch_offer_photos`), computes
-   `total_monthly_cost`, then **immediately** calls `insert_offer()` (a single
-   INSERT plus a `created` history entry) — no record is lost if the sync is
-   interrupted midway.
-6. `finish_sync_run()` — records the summary in `sync_runs`.
+   `total_monthly_cost`, then **immediately** calls `insert_offer(row, city)` (a
+   single INSERT plus a `created` history entry) — no record is lost if the
+   sync is interrupted midway.
+6. `finish_sync_run()` — records the summary in `sync_runs` (tagged with `city`).
+
+Supported cities (`sync_service.CITIES`): Warszawa, Kraków, Wrocław, Poznań,
+Gdańsk, Łódź — add a new entry (`display_name` + OLX URL `slug`) to support
+another city; `ensure_city_configs()` will pick it up automatically on the
+next startup.
 
 How it gets triggered:
 
 - **Automatic**: `start_background_scheduler()` (daemon thread
-  `_run_forever_loop`, daily at 2:00 AM, configurable via `RUN_HOUR`/`RUN_MINUTE`).
-- **Manual**: `trigger_manual_sync()` (via `POST /api/sync/run`).
-- Both are serialized through a shared `_sync_lock` — they never run in
-  parallel.
+  `_run_forever_loop`, polls `city_configs` every 30s and triggers each city
+  at its own configured `sync_hour`/`sync_minute`, default `02:00`,
+  changeable per-city via `PATCH /api/admin/cities/{city}`).
+- **Manual**: `trigger_manual_sync(city)` (via `POST /api/sync/run` for the
+  default city, or `POST /api/admin/cities/{city}/sync` for any city).
+- Each city has its own `threading.Lock` — the scheduler and a manual trigger
+  for the *same* city never run in parallel, but different cities can sync
+  concurrently.
 
 ## 6. Configuration (environment variables)
 
@@ -185,7 +237,16 @@ How it gets triggered:
 | `DATABASE_URL` | `sqlite:///{BASE_DIR}/data.db` | the only change needed to move to PostgreSQL |
 | `ENABLE_SYNC_SCHEDULER` | `true` | disable in tests/local dev so the API doesn't start scraping in the background |
 
-## 7. Notes for future development
+## 7. Admin dashboard (frontend)
+
+`frontend/src/app/admin/login` and `frontend/src/app/admin` implement a small
+admin panel: login form (calls `POST /api/auth/login`, stores the token in a
+persisted zustand store — `lib/admin-auth-store.ts`) and a dashboard listing
+every city with an editable sync hour/minute and a "Synchronizuj teraz"
+button (calls the `/api/admin/cities*` endpoints from `lib/api/admin.ts`).
+The dashboard route redirects to `/admin/login` if there is no valid token.
+
+## 8. Notes for future development
 
 - **New metrics/analyses**: add them in `services/analysis_service.py` or
   `statistics_service.py`, using `OfferRepository.rows_for_filters` /
