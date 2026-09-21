@@ -3,7 +3,6 @@
 import { RefreshCw } from "lucide-react";
 import { useRunSync, useSyncStatus } from "@/hooks";
 import { formatDate, formatNumber } from "@/lib/format";
-import { Button } from "@/components/ui/button";
 import { ApiError } from "@/lib/api";
 import {
   Tooltip,

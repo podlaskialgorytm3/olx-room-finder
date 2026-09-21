@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
 import { formatPln } from "@/lib/format";
@@ -15,11 +15,16 @@ interface RangeSliderFieldProps {
 }
 
 export function RangeSliderField({ label, min, max, step = 50, value, onChange }: RangeSliderFieldProps) {
-  const [local, setLocal] = useState<[number, number]>([value[0] ?? min, value[1] ?? max]);
+  const resolved: [number, number] = [value[0] ?? min, value[1] ?? max];
+  const [local, setLocal] = useState<[number, number]>(resolved);
+  const [synced, setSynced] = useState<[number, number]>(resolved);
 
-  useEffect(() => {
-    setLocal([value[0] ?? min, value[1] ?? max]);
-  }, [value, min, max]);
+  // Re-sync local state when the external `value` prop changes (e.g. cleared filters, browser back).
+  // Adjusting state during render (not in an effect) avoids an extra render pass.
+  if (resolved[0] !== synced[0] || resolved[1] !== synced[1]) {
+    setSynced(resolved);
+    setLocal(resolved);
+  }
 
   return (
     <div className="space-y-3">

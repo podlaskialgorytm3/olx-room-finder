@@ -14,8 +14,14 @@ interface SearchBarProps {
 /** Debounced search input so we don't refetch on every keystroke. */
 export function SearchBar({ value, onChange, placeholder, className }: SearchBarProps) {
   const [local, setLocal] = useState(value);
+  const [syncedValue, setSyncedValue] = useState(value);
 
-  useEffect(() => setLocal(value), [value]);
+  // Re-sync local state when the external `value` changes (e.g. cleared filters, browser back).
+  // Adjusting state during render (not in an effect) avoids an extra render pass.
+  if (value !== syncedValue) {
+    setSyncedValue(value);
+    setLocal(value);
+  }
 
   useEffect(() => {
     const timeout = setTimeout(() => {

@@ -2,7 +2,7 @@ export type DistrictGeoJsonProperties = {
   name: string;
 };
 
-export interface DistrictFeature extends GeoJSON.Feature<GeoJSON.Geometry, DistrictGeoJsonProperties> {}
+export type DistrictFeature = GeoJSON.Feature<GeoJSON.Geometry, DistrictGeoJsonProperties>;
 
 export interface DistrictMetricValue {
   district: string;
