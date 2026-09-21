@@ -54,8 +54,15 @@ def _apply_filters(stmt: Select, filters: OfferFilters) -> Select:
         stmt = stmt.where(offers.c.negotiable == int(filters.negotiable))
     # Pola tri-state (0/1/NULL): jawnie wykluczamy NULL, bo "nie wiadomo" nie
     # jest równoznaczne ani z true, ani z false.
-    if filters.has_additional_cost is not None:
-        stmt = stmt.where(offers.c.has_additional_cost == int(filters.has_additional_cost))
+    if filters.has_additional_cost is True:
+        # "Tylko z dodatkowymi dopłatami" ma sens tylko wtedy, gdy oferta ma
+        # has_additional_cost=true ORAZ znaną kwotę (additional_cost jako
+        # liczba, w tym 0) - has_additional_cost=true z additional_cost=NULL
+        # oznacza "wiadomo, że są opłaty, ale kwota nieznana" i nie pozwala
+        # pokazać pełnej ceny, więc takie oferty odfiltrowujemy.
+        stmt = stmt.where(offers.c.has_additional_cost == 1, offers.c.additional_cost.is_not(None))
+    elif filters.has_additional_cost is False:
+        stmt = stmt.where(offers.c.has_additional_cost == 0)
     if filters.has_deposit is not None:
         stmt = stmt.where(offers.c.has_deposit == int(filters.has_deposit))
     if filters.has_deposit_cost is not None:
