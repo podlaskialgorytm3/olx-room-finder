@@ -6,6 +6,7 @@
  * doesn't log the admin out. Never used for anything outside `/admin/*`.
  */
 
+import { useSyncExternalStore } from "react";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
@@ -31,4 +32,17 @@ export const useAdminAuthStore = create<AdminAuthState>()(
 /** Reads the current admin token outside of React (e.g. from `lib/api`). */
 export function getAdminToken(): string | null {
   return useAdminAuthStore.getState().token;
+}
+
+/**
+ * True once the persisted store has been rehydrated from localStorage on
+ * the client. Use this before trusting `token`/`username` to avoid a
+ * server/client render mismatch (server never has localStorage).
+ */
+export function useAdminAuthHydrated(): boolean {
+  return useSyncExternalStore(
+    (callback) => useAdminAuthStore.persist.onFinishHydration(callback),
+    () => useAdminAuthStore.persist.hasHydrated(),
+    () => false,
+  );
 }
