@@ -76,9 +76,13 @@ def _district_stats(repo: OfferRepository, filters: OfferFilters, district: str)
 
 
 def price_distribution(repo: OfferRepository, filters: OfferFilters, bin_size: float) -> list[dict]:
-    prices = _prices_with_additional_cost(repo, filters)
-    clean_prices = stats_math.exclude_extreme_outliers(prices)
-    return stats_math.make_histogram(clean_prices, bin_size)
+    # Mimo nazwy "price_distribution" (zachowanej dla kompatybilności z
+    # istniejącym endpointem/frontendem), histogram opiera się na całkowitym
+    # koszcie miesięcznym (czynsz + dodatkowe opłaty), a nie samej cenie -
+    # to on odzwierciedla realny koszt najmu.
+    costs = repo.values_for_filters(filters, "total_monthly_cost")
+    clean_costs = stats_math.exclude_extreme_outliers(costs)
+    return stats_math.make_histogram(clean_costs, bin_size)
 
 
 def deposits_stats(repo: OfferRepository, filters: OfferFilters) -> dict:

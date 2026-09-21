@@ -15,8 +15,8 @@ export function PriceHistogramChart() {
   const { data, isLoading, isError, refetch } = usePriceDistribution(BIN_SIZE);
 
   if (isLoading) return <Skeleton className="h-72 w-full" />;
-  if (isError) return <ErrorState onRetry={() => refetch()} description="Nie udało się pobrać rozkładu cen." />;
-  if (!data || data.length === 0) return <EmptyState title="Brak danych" description="Brak danych do zbudowania histogramu cen." />;
+  if (isError) return <ErrorState onRetry={() => refetch()} description="Nie udało się pobrać rozkładu kosztu całkowitego." />;
+  if (!data || data.length === 0) return <EmptyState title="Brak danych" description="Brak danych do zbudowania histogramu kosztu całkowitego." />;
 
   const chartData = data.map((bucket) => ({
     range: `${formatPln(bucket.from)}`,
@@ -27,10 +27,11 @@ export function PriceHistogramChart() {
 
   const handleBarClick = (bucket: { from: number; to: number }) => {
     // Klik w słupek przenosi do wyszukiwarki ofert z całej Warszawy (bez
-    // filtra dzielnicy) zawężonej do tego jednego przedziału cenowego.
+    // filtra dzielnicy) zawężonej do tego jednego przedziału całkowitego
+    // kosztu miesięcznego.
     const params = new URLSearchParams({
-      minPrice: String(bucket.from),
-      maxPrice: String(bucket.to),
+      minTotalMonthlyCost: String(bucket.from),
+      maxTotalMonthlyCost: String(bucket.to),
     });
     router.push(`/offers?${params.toString()}`);
   };

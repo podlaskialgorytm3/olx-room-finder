@@ -40,7 +40,7 @@ export default function StatisticsPage() {
       <section>
         <Card>
           <CardHeader>
-            <CardTitle>Rozkład cen</CardTitle>
+            <CardTitle>Rozkład kosztu całkowitego</CardTitle>
           </CardHeader>
           <CardContent>
             <PriceHistogramChart />
