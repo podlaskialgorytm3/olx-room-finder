@@ -8,6 +8,7 @@
 export interface Offer {
   id: string;
   title: string;
+  city: string;
   district: string | null;
   price: number | null;
   negotiable: boolean | null;

@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import { ErrorState } from "@/components/common/error-state";
-import { formatPercent, formatPln, formatTriState } from "@/lib/format";
+import { formatCity, formatPercent, formatPln, formatTriState } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 export default function OfferDetailPage() {
@@ -110,7 +110,7 @@ export default function OfferDetailPage() {
         <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
           {offer.district && (
             <Badge variant="secondary">
-              <MapPin className="size-3.5" /> {offer.district}
+              <MapPin className="size-3.5" /> {formatCity(offer.city)}, {offer.district}
             </Badge>
           )}
           {offer.address && <span>{offer.address}</span>}

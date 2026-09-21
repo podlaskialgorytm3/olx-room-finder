@@ -38,3 +38,10 @@ export function formatDate(value: string | null | undefined): string {
     return value;
   }
 }
+
+/** Baza danych przechowuje miasto wielkimi literami (np. "WARSZAWA") - w UI
+ * pokazujemy je w naturalnej formie ("Warszawa"). */
+export function formatCity(city: string | null | undefined): string {
+  if (!city) return "brak danych";
+  return city.charAt(0).toUpperCase() + city.slice(1).toLowerCase();
+}

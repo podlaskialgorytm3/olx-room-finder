@@ -687,6 +687,7 @@ SCHEMA = """
 CREATE TABLE IF NOT EXISTS offers (
     id TEXT PRIMARY KEY,
     title TEXT NOT NULL,
+    city TEXT NOT NULL DEFAULT 'WARSZAWA',
     district TEXT,
     price INTEGER,
     negotiable INTEGER,
@@ -735,7 +736,7 @@ CREATE TABLE IF NOT EXISTS sync_runs (
 """
 
 OFFER_COLUMNS = [
-    "id", "title", "district", "price", "negotiable", "link", "description",
+    "id", "title", "city", "district", "price", "negotiable", "link", "description",
     "address", "additional_cost", "has_additional_cost", "deposit",
     "has_deposit_cost", "has_deposit", "total_monthly_cost", "photos",
 ]
@@ -768,8 +769,23 @@ def _parse_bool(value: Any) -> Optional[int]:
 def init_db() -> None:
     with closing(get_connection()) as conn:
         conn.executescript(SCHEMA)
+        _migrate_add_city_column(conn)
         conn.commit()
     migrate_legacy_csv_if_needed()
+
+
+def _migrate_add_city_column(conn: sqlite3.Connection) -> None:
+    """
+    Migracja dla baz utworzonych przed dodaniem kolumny `city` - `CREATE
+    TABLE IF NOT EXISTS` w SCHEMA nie dotknie już istniejącej tabeli, więc
+    kolumnę trzeba dodać ręcznie przez ALTER TABLE. Wszystkie oferty w tym
+    projekcie dotyczą Warszawy, więc wartość jest na razie stała.
+    """
+    existing_columns = {row[1] for row in conn.execute("PRAGMA table_info(offers)").fetchall()}
+    if "city" not in existing_columns:
+        conn.execute("ALTER TABLE offers ADD COLUMN city TEXT NOT NULL DEFAULT 'WARSZAWA'")
+    else:
+        conn.execute("UPDATE offers SET city = 'WARSZAWA' WHERE city IS NULL OR city = ''")
 
 
 def migrate_legacy_csv_if_needed() -> None:
@@ -796,6 +812,7 @@ def migrate_legacy_csv_if_needed() -> None:
                 batch.append((
                     row.get("id"),
                     row.get("title", ""),
+                    "WARSZAWA",
                     row.get("district", ""),
                     _to_number(row.get("price")),
                     _parse_bool(row.get("negotiable")),
@@ -873,6 +890,7 @@ def insert_offer(row: dict[str, Any]) -> None:
     values = (
         row["id"],
         row["title"],
+        "WARSZAWA",
         row["district"],
         _to_number(row.get("price")),
         _parse_bool(row.get("negotiable")),

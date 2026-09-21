@@ -10,6 +10,7 @@ class OfferOut(BaseModel):
 
     id: str
     title: str
+    city: str = "WARSZAWA"
     district: Optional[str] = None
     price: Optional[float] = None
     negotiable: Optional[bool] = None

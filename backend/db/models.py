@@ -27,6 +27,7 @@ offers = Table(
     metadata,
     Column("id", String, primary_key=True),
     Column("title", String, nullable=False),
+    Column("city", String),
     Column("district", String),
     Column("price", Integer),
     Column("negotiable", Integer),  # 0/1

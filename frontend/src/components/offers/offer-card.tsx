@@ -4,7 +4,7 @@ import { ImageOff, MapPin, Wallet, Handshake } from "lucide-react";
 import type { Offer } from "@/types";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { formatPln, formatTriState } from "@/lib/format";
+import { formatCity, formatPln, formatTriState } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 
 export function OfferCard({ offer }: { offer: Offer }) {
@@ -30,7 +30,7 @@ export function OfferCard({ offer }: { offer: Offer }) {
           )}
           {offer.district && (
             <Badge className="absolute left-2 top-2 bg-background/90 text-foreground shadow" variant="secondary">
-              <MapPin className="size-3" /> {offer.district}
+              <MapPin className="size-3" /> {formatCity(offer.city)}, {offer.district}
             </Badge>
           )}
         </div>
