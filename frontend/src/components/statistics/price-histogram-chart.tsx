@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { usePriceDistribution } from "@/hooks";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -7,8 +8,11 @@ import { EmptyState } from "@/components/common/empty-state";
 import { ErrorState } from "@/components/common/error-state";
 import { formatPln } from "@/lib/format";
 
+const BIN_SIZE = 100;
+
 export function PriceHistogramChart() {
-  const { data, isLoading, isError, refetch } = usePriceDistribution(250);
+  const router = useRouter();
+  const { data, isLoading, isError, refetch } = usePriceDistribution(BIN_SIZE);
 
   if (isLoading) return <Skeleton className="h-72 w-full" />;
   if (isError) return <ErrorState onRetry={() => refetch()} description="Nie udało się pobrać rozkładu cen." />;
@@ -17,7 +21,19 @@ export function PriceHistogramChart() {
   const chartData = data.map((bucket) => ({
     range: `${formatPln(bucket.from)}`,
     count: bucket.count,
+    from: bucket.from,
+    to: bucket.to,
   }));
+
+  const handleBarClick = (bucket: { from: number; to: number }) => {
+    // Klik w słupek przenosi do wyszukiwarki ofert z całej Warszawy (bez
+    // filtra dzielnicy) zawężonej do tego jednego przedziału cenowego.
+    const params = new URLSearchParams({
+      minPrice: String(bucket.from),
+      maxPrice: String(bucket.to),
+    });
+    router.push(`/offers?${params.toString()}`);
+  };
 
   return (
     <ResponsiveContainer width="100%" height={300}>
@@ -29,7 +45,16 @@ export function PriceHistogramChart() {
           formatter={(value) => [`${value} ofert`, "Liczba"]}
           contentStyle={{ borderRadius: 8, fontSize: 12 }}
         />
-        <Bar dataKey="count" fill="var(--primary)" radius={[4, 4, 0, 0]} />
+        <Bar
+          dataKey="count"
+          fill="var(--primary)"
+          radius={[4, 4, 0, 0]}
+          cursor="pointer"
+          onClick={(entry) => {
+            const payload = (entry as { payload?: { from: number; to: number } })?.payload;
+            if (payload) handleBarClick(payload);
+          }}
+        />
       </BarChart>
     </ResponsiveContainer>
   );
