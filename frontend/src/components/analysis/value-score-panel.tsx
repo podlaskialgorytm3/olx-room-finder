@@ -23,10 +23,10 @@ export function ValueScorePanel() {
         <CardDescription className="flex items-start gap-2">
           <Info className="mt-0.5 size-4 shrink-0" />
           <span>
-            To nie jest ocena jakości mieszkania — to wskaźnik statystyczny wyliczony na podstawie odchylenia ceny i
-            całkowitego kosztu od mediany/MAD dzielnicy, skorygowany o negocjowalność i wymaganą kaucję. Wyższa
-            wartość oznacza cenę relatywnie korzystniejszą na tle dzielnicy, ale nie uwzględnia stanu technicznego,
-            lokalizacji szczegółowej ani innych cech oferty.
+            To nie jest ocena jakości mieszkania — to wskaźnik statystyczny wyliczony na podstawie odchylenia
+            całkowitego kosztu miesięcznego (czynsz + dodatkowe opłaty) od mediany/MAD dzielnicy, skorygowany o
+            negocjowalność i wymaganą kaucję. Wyższa wartość oznacza koszt relatywnie korzystniejszy na tle dzielnicy,
+            ale nie uwzględnia stanu technicznego, lokalizacji szczegółowej ani innych cech oferty.
           </span>
         </CardDescription>
       </CardHeader>

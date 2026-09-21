@@ -14,32 +14,37 @@ from backend.services import stats_math
 
 
 def price_vs_district(repo: OfferRepository, filters: OfferFilters) -> list[dict]:
-    rows = repo.rows_for_filters(filters, ["id", "title", "district", "price"])
+    # Analiza porównawcza opiera się na całkowitym koszcie miesięcznym
+    # (czynsz + dodatkowe opłaty), a nie samej cenie najmu - to on
+    # odzwierciedla realny koszt utrzymania pokoju. Pole `price` w
+    # odpowiedzi (nazwa zachowana dla kompatybilności ze schematem/frontem)
+    # zawiera właśnie tę wartość.
+    rows = repo.rows_for_filters(filters, ["id", "title", "district", "total_monthly_cost"])
 
-    # Mediana ceny liczona per dzielnica na podstawie TEGO SAMEGO
-    # przefiltrowanego zbioru (żeby np. filtr cenowy nie zniekształcał
+    # Mediana kosztu całkowitego liczona per dzielnica na podstawie TEGO
+    # SAMEGO przefiltrowanego zbioru (żeby np. filtr cenowy nie zniekształcał
     # porównania między ofertami, których i tak dotyczy).
     by_district: dict[str, list[float]] = {}
     for row in rows:
-        if row["district"] and row["price"] is not None:
-            by_district.setdefault(row["district"], []).append(row["price"])
-    medians = {district: stats_math.safe_median(prices) for district, prices in by_district.items()}
+        if row["district"] and row["total_monthly_cost"] is not None:
+            by_district.setdefault(row["district"], []).append(row["total_monthly_cost"])
+    medians = {district: stats_math.safe_median(costs) for district, costs in by_district.items()}
 
     result = []
     for row in rows:
         district_median = medians.get(row["district"]) if row["district"] else None
-        price = row["price"]
+        cost = row["total_monthly_cost"]
         difference = None
         difference_percent = None
-        if price is not None and district_median:
-            difference = round(price - district_median, 2)
-            difference_percent = round((price - district_median) / district_median * 100, 2)
+        if cost is not None and district_median:
+            difference = round(cost - district_median, 2)
+            difference_percent = round((cost - district_median) / district_median * 100, 2)
 
         result.append({
             "id": row["id"],
             "title": row["title"],
             "district": row["district"],
-            "price": price,
+            "price": cost,
             "district_median": district_median,
             "difference": difference,
             "difference_percent": difference_percent,

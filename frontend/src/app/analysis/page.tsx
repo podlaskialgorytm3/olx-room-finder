@@ -18,7 +18,7 @@ export default function AnalysisPage() {
 
       <Tabs defaultValue="price-vs-district">
         <TabsList>
-          <TabsTrigger value="price-vs-district">Cena vs dzielnica</TabsTrigger>
+          <TabsTrigger value="price-vs-district">Koszt całkowity vs dzielnica</TabsTrigger>
           <TabsTrigger value="outliers">Outliers</TabsTrigger>
           <TabsTrigger value="initial-cost">Koszt wejścia</TabsTrigger>
           <TabsTrigger value="value">Value score</TabsTrigger>

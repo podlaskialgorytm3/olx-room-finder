@@ -18,9 +18,9 @@ export function PriceVsDistrictPanel() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Cena względem dzielnicy</CardTitle>
+        <CardTitle>Koszt całkowity względem dzielnicy</CardTitle>
         <CardDescription>
-          Oferty posortowane od najbardziej poniżej mediany swojej dzielnicy do najbardziej powyżej.
+          Oferty posortowane od najbardziej poniżej mediany całkowitego kosztu swojej dzielnicy do najbardziej powyżej.
         </CardDescription>
       </CardHeader>
       <CardContent>

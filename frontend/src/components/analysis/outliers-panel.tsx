@@ -13,14 +13,14 @@ import { formatPln } from "@/lib/format";
 import type { AnalysisMetric } from "@/types";
 
 const METRIC_OPTIONS: { value: AnalysisMetric; label: string }[] = [
-  { value: "price", label: "Cena" },
   { value: "total_monthly_cost", label: "Całkowity koszt" },
+  { value: "price", label: "Cena" },
   { value: "additional_cost", label: "Dodatkowe opłaty" },
   { value: "deposit", label: "Kaucja" },
 ];
 
 export function OutliersPanel() {
-  const [metric, setMetric] = useState<AnalysisMetric>("price");
+  const [metric, setMetric] = useState<AnalysisMetric>("total_monthly_cost");
   const { data, isLoading, isError, refetch } = useOutliers(metric);
 
   return (
