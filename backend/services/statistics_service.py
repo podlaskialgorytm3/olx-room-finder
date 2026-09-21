@@ -14,16 +14,33 @@ from backend.services import stats_math
 
 
 def _metric_summary(values: list[Optional[float]]) -> dict[str, Optional[float]]:
+    filtered = stats_math.exclude_extreme_outliers(values)
     return {
-        "avg": stats_math.safe_mean(values),
-        "median": stats_math.safe_median(values),
-        "min": stats_math.safe_min(values),
-        "max": stats_math.safe_max(values),
+        "avg": stats_math.safe_mean(filtered),
+        "median": stats_math.safe_median(filtered),
+        "min": stats_math.safe_min(filtered),
+        "max": stats_math.safe_max(filtered),
     }
 
 
+def _prices_with_additional_cost(repo: OfferRepository, filters: OfferFilters) -> list[float]:
+    """
+    Statystyki "ceny" (średnia/mediana) mają uwzględniać zarówno czynsz
+    (price), jak i dodatkowe opłaty (additional_cost) - same tylko koszty
+    najmu zaniżałyby realny koszt mieszkania. Gdy additional_cost jest
+    nieznane, traktujemy je jako 0 (nie odrzucamy oferty tylko dlatego, że
+    kwota dopłat nie jest podana).
+    """
+    rows = repo.rows_for_filters(filters, ["price", "additional_cost"])
+    return [
+        row["price"] + (row["additional_cost"] or 0)
+        for row in rows
+        if row["price"] is not None
+    ]
+
+
 def overview(repo: OfferRepository, filters: OfferFilters) -> dict:
-    prices = repo.values_for_filters(filters, "price")
+    prices = _prices_with_additional_cost(repo, filters)
     costs = repo.values_for_filters(filters, "total_monthly_cost")
     return {
         "count": repo.count_for_filters(filters),
@@ -48,7 +65,7 @@ def district_detail(repo: OfferRepository, filters: OfferFilters, district: str)
 
 
 def _district_stats(repo: OfferRepository, filters: OfferFilters, district: str) -> dict:
-    prices = repo.values_for_filters(filters, "price")
+    prices = _prices_with_additional_cost(repo, filters)
     costs = repo.values_for_filters(filters, "total_monthly_cost")
     return {
         "district": district,
@@ -69,14 +86,15 @@ def deposits_stats(repo: OfferRepository, filters: OfferFilters) -> dict:
     without_deposit_count = sum(1 for r in rows if r["has_deposit"] == 0)
     unknown_count = sum(1 for r in rows if r["has_deposit"] is None)
     total = len(rows)
+    with_deposit_clean = stats_math.exclude_extreme_outliers(with_deposit)
 
     return {
         "with_deposit": len(with_deposit),
         "without_deposit": without_deposit_count,
         "unknown": unknown_count,
         "with_deposit_percent": round(len(with_deposit) / total * 100, 2) if total else None,
-        "avg_deposit": stats_math.safe_mean(with_deposit),
-        "median_deposit": stats_math.safe_median(with_deposit),
+        "avg_deposit": stats_math.safe_mean(with_deposit_clean),
+        "median_deposit": stats_math.safe_median(with_deposit_clean),
     }
 
 
@@ -86,14 +104,15 @@ def additional_costs_stats(repo: OfferRepository, filters: OfferFilters) -> dict
     without_cost_count = sum(1 for r in rows if r["has_additional_cost"] == 0)
     unknown_count = sum(1 for r in rows if r["has_additional_cost"] is None)
     total = len(rows)
+    with_cost_clean = stats_math.exclude_extreme_outliers(with_cost)
 
     return {
         "with_additional_cost": len(with_cost),
         "without_additional_cost": without_cost_count,
         "unknown": unknown_count,
         "with_additional_cost_percent": round(len(with_cost) / total * 100, 2) if total else None,
-        "avg_additional_cost": stats_math.safe_mean(with_cost),
-        "median_additional_cost": stats_math.safe_median(with_cost),
+        "avg_additional_cost": stats_math.safe_mean(with_cost_clean),
+        "median_additional_cost": stats_math.safe_median(with_cost_clean),
     }
 
 

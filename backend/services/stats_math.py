@@ -40,6 +40,27 @@ def safe_max(values: Sequence[Optional[float]]) -> Optional[float]:
     return max(nums) if nums else None
 
 
+def exclude_extreme_outliers(values: Sequence[Optional[float]]) -> list[float]:
+    """
+    Odrzuca skrajnie odstające maksima: jeśli największa wartość w zbiorze
+    przekracza 10-krotność średniej, usuwamy ją i sprawdzamy ponownie (nowe
+    maksimum może nadal być skrajnym odstającym). Chroni to średnią/medianę
+    przed pojedynczymi błędnymi wpisami (np. literówka o rząd wielkości za
+    duża) bez arbitralnego obcinania normalnego rozkładu cen.
+    """
+    nums = clean_numbers(values)
+    while len(nums) > 1:
+        mean = statistics.fmean(nums)
+        if mean <= 0:
+            break
+        current_max = max(nums)
+        if current_max > mean * 10:
+            nums.remove(current_max)
+        else:
+            break
+    return nums
+
+
 def percentile(values: Sequence[float], pct: float) -> float:
     """Percentyl metodą liniowej interpolacji (zgodny z numpy 'linear')."""
     if not values:
