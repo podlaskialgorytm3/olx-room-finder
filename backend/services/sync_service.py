@@ -62,12 +62,17 @@ from backend.config import BASE_DIR
 
 BASE_URL = "https://www.olx.pl"
 LISTING_PATH_TEMPLATE = "/nieruchomosci/stancje-pokoje/{slug}/"
+# Wymagany prefiks ścieżki dla każdego linku miasta - tylko listingi z tej
+# kategorii OLX (pokoje/stancje) są obsługiwane przez scraper.
+OLX_LISTING_PATH_PREFIX = "/nieruchomosci/stancje-pokoje/"
+OLX_ALLOWED_HOSTS = {"olx.pl", "www.olx.pl"}
 
-# Miasta obsługiwane przez synchronizację. Klucz to kod miasta zapisywany w
-# kolumnie `offers.city` / `sync_runs.city`, `slug` to fragment ścieżki URL
-# listingu OLX dla danego miasta. Dodanie nowego miasta wymaga tylko wpisu
-# tutaj - reszta (harmonogram, panel administratora, filtrowanie) korzysta
-# z tego słownika automatycznie.
+# Miasta obsługiwane domyślnie przy pierwszym uruchomieniu (seed). Klucz to
+# kod miasta zapisywany w kolumnie `offers.city` / `sync_runs.city`, `slug`
+# to fragment ścieżki URL listingu OLX dla danego miasta. Od momentu
+# wprowadzenia CRUD-a miast w panelu administratora jedynym źródłem prawdy w
+# trakcie działania aplikacji jest tabela `city_configs` - ten słownik służy
+# tylko do jednorazowego zasilenia jej przy starcie (patrz `ensure_city_configs`).
 CITIES: dict[str, dict[str, str]] = {
     "WARSZAWA": {"display_name": "Warszawa", "slug": "warszawa"},
     "KRAKOW": {"display_name": "Kraków", "slug": "krakow"},
@@ -80,6 +85,44 @@ DEFAULT_CITY = "WARSZAWA"
 
 # Zachowane dla wstecznej kompatybilności (domyślny listing - Warszawa).
 LISTING_URL = f"{BASE_URL}{LISTING_PATH_TEMPLATE.format(slug=CITIES[DEFAULT_CITY]['slug'])}"
+
+
+class InvalidOlxLinkError(ValueError):
+    """Link podany dla miasta nie jest poprawnym listingiem OLX kategorii pokoje/stancje."""
+
+
+def validate_olx_listing_link(link: str) -> str:
+    """Waliduje, że `link` jest linkiem do listingu OLX kategorii
+    pokoje/stancje (`/nieruchomosci/stancje-pokoje/...`) i zwraca go w
+    znormalizowanej postaci (https://www.olx.pl/..., bez parametrów
+    zapytania ani fragmentu). Rzuca `InvalidOlxLinkError` w przeciwnym razie."""
+    raw = (link or "").strip()
+    if not raw:
+        raise InvalidOlxLinkError("Link nie może być pusty.")
+
+    # Pozwól wkleić link bez schematu (np. "www.olx.pl/...").
+    if "://" not in raw:
+        raw = f"https://{raw}"
+
+    parsed = urlparse(raw)
+    if parsed.scheme not in ("http", "https"):
+        raise InvalidOlxLinkError("Link musi zaczynać się od http:// lub https://.")
+
+    host = parsed.netloc.lower().split(":")[0]
+    if host not in OLX_ALLOWED_HOSTS:
+        raise InvalidOlxLinkError("Link musi prowadzić do serwisu olx.pl (np. https://www.olx.pl/...).")
+
+    path = parsed.path if parsed.path.endswith("/") else f"{parsed.path}/"
+    if not path.startswith(OLX_LISTING_PATH_PREFIX):
+        raise InvalidOlxLinkError(
+            f"Link musi prowadzić do listingu kategorii {OLX_LISTING_PATH_PREFIX} (pokoje/stancje)."
+        )
+
+    slug_part = path[len(OLX_LISTING_PATH_PREFIX):].strip("/")
+    if not slug_part or not re.fullmatch(r"[a-z0-9-]+(/[a-z0-9-]+)*", slug_part):
+        raise InvalidOlxLinkError("Link musi zawierać poprawny fragment miasta (np. .../stancje-pokoje/krakow/).")
+
+    return f"{BASE_URL}{path}"
 
 DB_FILE = str(BASE_DIR / "data.db")
 LEGACY_CSV_FILE = str(BASE_DIR / "data.csv")  # do jednorazowej migracji, jeśli baza jeszcze nie istnieje
@@ -304,10 +347,10 @@ def parse_offers(html: str) -> list[RoomOffer]:
 
 
 def build_listing_url(city: str = DEFAULT_CITY) -> str:
-    city_info = CITIES.get(city)
-    if city_info is None:
+    config = get_city_config(city)
+    if config is None or not config.get("link"):
         raise ValueError(f"Nieznane miasto: {city!r}")
-    return f"{BASE_URL}{LISTING_PATH_TEMPLATE.format(slug=city_info['slug'])}"
+    return config["link"]
 
 
 def build_page_url(page_number: int, city: str = DEFAULT_CITY) -> str:
@@ -766,6 +809,7 @@ CREATE TABLE IF NOT EXISTS sync_runs (
 CREATE TABLE IF NOT EXISTS city_configs (
     city TEXT PRIMARY KEY,
     display_name TEXT NOT NULL,
+    link TEXT,
     sync_hour INTEGER NOT NULL DEFAULT 2,
     sync_minute INTEGER NOT NULL DEFAULT 0
 );
@@ -824,6 +868,7 @@ def init_db() -> None:
         conn.executescript(SCHEMA)
         _migrate_add_city_column(conn)
         _migrate_add_city_to_sync_runs(conn)
+        _migrate_add_link_to_city_configs(conn)
         conn.execute("CREATE INDEX IF NOT EXISTS idx_sync_runs_city ON sync_runs(city)")
         conn.commit()
     migrate_legacy_csv_if_needed()
@@ -837,6 +882,13 @@ def _migrate_add_city_to_sync_runs(conn: sqlite3.Connection) -> None:
         conn.execute(f"ALTER TABLE sync_runs ADD COLUMN city TEXT NOT NULL DEFAULT '{DEFAULT_CITY}'")
 
 
+def _migrate_add_link_to_city_configs(conn: sqlite3.Connection) -> None:
+    """Migracja dla baz utworzonych przed dodaniem kolumny `link` do `city_configs`."""
+    existing_columns = {row[1] for row in conn.execute("PRAGMA table_info(city_configs)").fetchall()}
+    if "link" not in existing_columns:
+        conn.execute("ALTER TABLE city_configs ADD COLUMN link TEXT")
+
+
 def ensure_city_configs() -> None:
     """Zakłada wiersz w `city_configs` dla każdego miasta z `CITIES`, jeśli
     jeszcze go tam nie ma (domyślna godzina synchronizacji: RUN_HOUR:RUN_MINUTE)."""
@@ -845,10 +897,20 @@ def ensure_city_configs() -> None:
         for code, info in CITIES.items():
             if code in existing:
                 continue
+            link = f"{BASE_URL}{LISTING_PATH_TEMPLATE.format(slug=info['slug'])}"
             conn.execute(
-                "INSERT INTO city_configs (city, display_name, sync_hour, sync_minute) VALUES (?, ?, ?, ?)",
-                (code, info["display_name"], RUN_HOUR, RUN_MINUTE),
+                "INSERT INTO city_configs (city, display_name, link, sync_hour, sync_minute) VALUES (?, ?, ?, ?, ?)",
+                (code, info["display_name"], link, RUN_HOUR, RUN_MINUTE),
             )
+        # Miasta z bazy utworzonej przed dodaniem kolumny `link` - dopisz link na podstawie CITIES.
+        rows_without_link = conn.execute(
+            "SELECT city FROM city_configs WHERE link IS NULL OR link = ''"
+        ).fetchall()
+        for (code,) in rows_without_link:
+            info = CITIES.get(code)
+            if info:
+                link = f"{BASE_URL}{LISTING_PATH_TEMPLATE.format(slug=info['slug'])}"
+                conn.execute("UPDATE city_configs SET link = ? WHERE city = ?", (link, code))
         conn.commit()
 
 
@@ -866,18 +928,83 @@ def get_city_config(city: str) -> Optional[dict[str, Any]]:
         return dict(row) if row else None
 
 
-def update_city_sync_hour(city: str, sync_hour: int, sync_minute: int) -> Optional[dict[str, Any]]:
-    """Aktualizuje godzinę/minutę codziennej synchronizacji dla danego miasta.
-    Zwraca zaktualizowaną konfigurację albo None, jeśli miasto nie istnieje."""
+def create_city_config(
+    city: str,
+    display_name: str,
+    link: str,
+    sync_hour: int = RUN_HOUR,
+    sync_minute: int = RUN_MINUTE,
+) -> dict[str, Any]:
+    """Tworzy nowe miasto w `city_configs`. `link` musi być zwalidowany
+    wcześniej przez `validate_olx_listing_link` (rzuca `InvalidOlxLinkError`,
+    jeśli nie jest linkiem OLX kategorii pokoje/stancje)."""
+    normalized_link = validate_olx_listing_link(link)
     with closing(get_connection()) as conn:
-        cursor = conn.execute(
-            "UPDATE city_configs SET sync_hour = ?, sync_minute = ? WHERE city = ?",
-            (sync_hour, sync_minute, city),
+        existing = conn.execute("SELECT 1 FROM city_configs WHERE city = ?", (city,)).fetchone()
+        if existing:
+            raise ValueError(f"Miasto {city!r} już istnieje.")
+        conn.execute(
+            "INSERT INTO city_configs (city, display_name, link, sync_hour, sync_minute) VALUES (?, ?, ?, ?, ?)",
+            (city, display_name, normalized_link, sync_hour, sync_minute),
         )
+        conn.commit()
+    return get_city_config(city)  # type: ignore[return-value]
+
+
+def update_city_config(
+    city: str,
+    sync_hour: Optional[int] = None,
+    sync_minute: Optional[int] = None,
+    display_name: Optional[str] = None,
+    link: Optional[str] = None,
+) -> Optional[dict[str, Any]]:
+    """Aktualizuje konfigurację miasta - godzinę/minutę synchronizacji oraz,
+    opcjonalnie, nazwę wyświetlaną i link do listingu OLX. Zwraca
+    zaktualizowaną konfigurację albo None, jeśli miasto nie istnieje."""
+    fields: list[str] = []
+    values: list[Any] = []
+
+    if sync_hour is not None:
+        fields.append("sync_hour = ?")
+        values.append(sync_hour)
+    if sync_minute is not None:
+        fields.append("sync_minute = ?")
+        values.append(sync_minute)
+    if display_name is not None:
+        fields.append("display_name = ?")
+        values.append(display_name)
+    if link is not None:
+        fields.append("link = ?")
+        values.append(validate_olx_listing_link(link))
+
+    if not fields:
+        return get_city_config(city)
+
+    values.append(city)
+    with closing(get_connection()) as conn:
+        cursor = conn.execute(f"UPDATE city_configs SET {', '.join(fields)} WHERE city = ?", values)
         conn.commit()
         if cursor.rowcount == 0:
             return None
     return get_city_config(city)
+
+
+# Zachowane dla wstecznej kompatybilności (starsze wywołania endpointu godziny synchronizacji).
+def update_city_sync_hour(city: str, sync_hour: int, sync_minute: int) -> Optional[dict[str, Any]]:
+    return update_city_config(city, sync_hour=sync_hour, sync_minute=sync_minute)
+
+
+def delete_city_config(city: str) -> bool:
+    """Usuwa miasto z `city_configs` wraz z jego ofertami i historią
+    synchronizacji. Zwraca False, jeśli miasto nie istniało."""
+    with closing(get_connection()) as conn:
+        cursor = conn.execute("DELETE FROM city_configs WHERE city = ?", (city,))
+        deleted = cursor.rowcount > 0
+        if deleted:
+            conn.execute("DELETE FROM offers WHERE city = ?", (city,))
+            conn.execute("DELETE FROM sync_runs WHERE city = ?", (city,))
+        conn.commit()
+    return deleted
 
 
 def _migrate_add_city_column(conn: sqlite3.Connection) -> None:
@@ -1227,7 +1354,7 @@ def trigger_manual_sync(city: str = DEFAULT_CITY) -> bool:
     Zwraca False, jeśli synchronizacja tego miasta już trwa (nic nowego nie
     uruchomiono), True jeśli nowa synchronizacja została wystartowana.
     """
-    if city not in CITIES:
+    if get_city_config(city) is None:
         raise ValueError(f"Nieznane miasto: {city!r}")
     if _get_city_lock(city).locked():
         return False

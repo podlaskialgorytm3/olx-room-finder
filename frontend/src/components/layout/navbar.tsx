@@ -45,7 +45,7 @@ export function Navbar() {
             href="/admin"
             className="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
           >
-            Panel admina
+            Logowanie
           </Link>
         </div>
       </div>

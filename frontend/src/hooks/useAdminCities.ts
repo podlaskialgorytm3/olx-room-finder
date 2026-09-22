@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { adminApi } from "@/lib/api";
 import { useAdminAuthStore } from "@/lib/admin-auth-store";
 import { queryKeys } from "@/lib/query-keys";
-import type { CityConfigUpdate } from "@/types";
+import type { CityConfigCreate, CityConfigUpdate } from "@/types";
 
 export function useCityConfigs() {
   const token = useAdminAuthStore((state) => state.token);
@@ -17,11 +17,31 @@ export function useCityConfigs() {
   });
 }
 
+export function useCreateCity() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: CityConfigCreate) => adminApi.createCity(payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.adminCities() });
+    },
+  });
+}
+
 export function useUpdateCitySyncHour() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ city, payload }: { city: string; payload: CityConfigUpdate }) =>
       adminApi.updateCitySyncHour(city, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.adminCities() });
+    },
+  });
+}
+
+export function useDeleteCity() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (city: string) => adminApi.deleteCity(city),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.adminCities() });
     },
