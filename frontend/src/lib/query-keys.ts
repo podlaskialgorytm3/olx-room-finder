@@ -23,4 +23,5 @@ export const queryKeys = {
   valueScore: (filters: OfferFilters) => ["analysis", "value", filters] as const,
   syncStatus: () => ["sync", "status"] as const,
   adminCities: () => ["admin", "cities"] as const,
+  publicCities: () => ["cities", "public"] as const,
 };

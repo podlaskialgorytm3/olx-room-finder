@@ -5,3 +5,4 @@ export * as analysisApi from "./analysis";
 export * as syncApi from "./sync";
 export * as authApi from "./auth";
 export * as adminApi from "./admin";
+export * as citiesApi from "./cities";

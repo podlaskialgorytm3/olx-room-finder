@@ -4,3 +4,4 @@ export * from "./analysis";
 export * from "./sync";
 export * from "./auth";
 export * from "./admin";
+export * from "./city";
