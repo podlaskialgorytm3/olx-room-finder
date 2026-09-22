@@ -18,16 +18,20 @@ interface QuickFilterBarProps {
   onChange: (patch: Partial<OfferFilters>) => void;
   onClear: () => void;
   activeCount: number;
+  /** Ukryj filtr dzielnicy - używane dla miast innych niż Warszawa, dla których nie mamy podziału na dzielnice. */
+  showDistrict?: boolean;
 }
 
-export function QuickFilterBar({ filters, onChange, onClear, activeCount }: QuickFilterBarProps) {
+export function QuickFilterBar({ filters, onChange, onClear, activeCount, showDistrict = true }: QuickFilterBarProps) {
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <DistrictSelect
-        value={filters.district}
-        onChange={(district) => onChange({ district })}
-        className="w-[180px]"
-      />
+      {showDistrict && (
+        <DistrictSelect
+          value={filters.district}
+          onChange={(district) => onChange({ district })}
+          className="w-[180px]"
+        />
+      )}
 
       <Popover>
         <PopoverTrigger asChild>

@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { HelpCircle, MapPin, X } from "lucide-react";
 import { SearchBar } from "@/components/filters/search-bar";
 import { DistrictSelect } from "@/components/filters/district-select";
+import { CitySelect } from "@/components/filters/city-select";
 import { RangeSliderField } from "@/components/filters/range-slider-field";
 import { TriStateSelect } from "@/components/filters/tri-state-select";
 import { OfferGrid } from "@/components/offers/offer-grid";
@@ -15,6 +16,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useOffers } from "@/hooks";
+import { useSelectedCity, DEFAULT_CITY } from "@/lib/city-store";
 import { parseOffersQuery, offersQueryToParams } from "@/lib/url-filters";
 import { PRICE_RANGE, TOTAL_COST_RANGE } from "@/lib/constants";
 import type { OffersQuery, SortField, SortOrder } from "@/types";
@@ -22,6 +24,8 @@ import type { OffersQuery, SortField, SortOrder } from "@/types";
 export function OffersPageClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const city = useSelectedCity();
+  const isWarsaw = city === DEFAULT_CITY;
 
   const query = useMemo(() => parseOffersQuery(searchParams), [searchParams]);
   const page = query.page ?? 1;
@@ -44,7 +48,10 @@ export function OffersPageClient() {
   return (
     <div className="mx-auto max-w-7xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">
       <div className="space-y-3">
-        <h1 className="text-2xl font-semibold tracking-tight">Oferty pokoi</h1>
+        <h1 className="flex flex-wrap items-baseline gap-x-2 text-2xl font-semibold tracking-tight">
+          <span>Oferty pokoi -</span>
+          <CitySelect variant="heading" />
+        </h1>
         <SearchBar value={query.search ?? ""} onChange={(search) => updateQuery({ search: search || undefined })} />
       </div>
 
@@ -60,14 +67,16 @@ export function OffersPageClient() {
                 </Button>
               </div>
 
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium">Dzielnica</label>
-                <DistrictSelect
-                  value={query.district}
-                  onChange={(district) => updateQuery({ district })}
-                  className="w-full"
-                />
-              </div>
+              {isWarsaw && (
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium">Dzielnica</label>
+                  <DistrictSelect
+                    value={query.district}
+                    onChange={(district) => updateQuery({ district })}
+                    className="w-full"
+                  />
+                </div>
+              )}
 
               <RangeSliderField
                 label="Cena"
