@@ -2,47 +2,60 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { analysisApi } from "@/lib/api";
+import { useSelectedCity } from "@/lib/city-store";
 import { queryKeys } from "@/lib/query-keys";
 import type { AnalysisMetric, OfferFilters } from "@/types";
 
 export function usePriceVsDistrict(filters: OfferFilters = {}) {
+  const city = useSelectedCity();
+  const scoped = { city, ...filters };
   return useQuery({
-    queryKey: queryKeys.priceVsDistrict(filters),
-    queryFn: () => analysisApi.getPriceVsDistrict(filters),
+    queryKey: queryKeys.priceVsDistrict(scoped),
+    queryFn: () => analysisApi.getPriceVsDistrict(scoped),
   });
 }
 
 export function useInitialCost(filters: OfferFilters = {}) {
+  const city = useSelectedCity();
+  const scoped = { city, ...filters };
   return useQuery({
-    queryKey: queryKeys.initialCost(filters),
-    queryFn: () => analysisApi.getInitialCost(filters),
+    queryKey: queryKeys.initialCost(scoped),
+    queryFn: () => analysisApi.getInitialCost(scoped),
   });
 }
 
 export function useDistrictsComparison(filters: OfferFilters = {}) {
+  const city = useSelectedCity();
+  const scoped = { city, ...filters };
   return useQuery({
-    queryKey: queryKeys.districtsComparison(filters),
-    queryFn: () => analysisApi.getDistrictsComparison(filters),
+    queryKey: queryKeys.districtsComparison(scoped),
+    queryFn: () => analysisApi.getDistrictsComparison(scoped),
   });
 }
 
 export function useOutliers(metric: AnalysisMetric = "price", filters: OfferFilters = {}) {
+  const city = useSelectedCity();
+  const scoped = { city, ...filters };
   return useQuery({
-    queryKey: queryKeys.outliers(metric, filters),
-    queryFn: () => analysisApi.getOutliers(metric, filters),
+    queryKey: queryKeys.outliers(metric, scoped),
+    queryFn: () => analysisApi.getOutliers(metric, scoped),
   });
 }
 
 export function useCostDistribution(metric: AnalysisMetric = "total_monthly_cost", binSize?: number, filters: OfferFilters = {}) {
+  const city = useSelectedCity();
+  const scoped = { city, ...filters };
   return useQuery({
-    queryKey: queryKeys.costDistribution(metric, binSize, filters),
-    queryFn: () => analysisApi.getCostDistribution(metric, binSize, filters),
+    queryKey: queryKeys.costDistribution(metric, binSize, scoped),
+    queryFn: () => analysisApi.getCostDistribution(metric, binSize, scoped),
   });
 }
 
 export function useValueScore(filters: OfferFilters = {}) {
+  const city = useSelectedCity();
+  const scoped = { city, ...filters };
   return useQuery({
-    queryKey: queryKeys.valueScore(filters),
-    queryFn: () => analysisApi.getValueScore(filters),
+    queryKey: queryKeys.valueScore(scoped),
+    queryFn: () => analysisApi.getValueScore(scoped),
   });
 }

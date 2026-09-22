@@ -2,13 +2,16 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { offersApi } from "@/lib/api";
+import { useSelectedCity } from "@/lib/city-store";
 import { queryKeys } from "@/lib/query-keys";
 import type { OffersQuery } from "@/types";
 
 export function useOffers(query: OffersQuery) {
+  const city = useSelectedCity();
+  const scoped = { city, ...query };
   return useQuery({
-    queryKey: queryKeys.offers(query),
-    queryFn: () => offersApi.getOffers(query),
+    queryKey: queryKeys.offers(scoped),
+    queryFn: () => offersApi.getOffers(scoped),
     placeholderData: (previousData) => previousData,
   });
 }
