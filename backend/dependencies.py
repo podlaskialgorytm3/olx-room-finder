@@ -16,6 +16,7 @@ from backend.services import auth_service
 
 
 def offer_filters_params(
+    city: Optional[str] = Query(None, description="Filtr po mieście (kod, np. WARSZAWA)"),
     district: Optional[str] = Query(None, description="Filtr po dzielnicy"),
     minPrice: Optional[float] = Query(None, ge=0),
     maxPrice: Optional[float] = Query(None, ge=0),
@@ -28,6 +29,7 @@ def offer_filters_params(
     search: Optional[str] = Query(None, min_length=1, description="Szuka w title/description/address"),
 ) -> OfferFilters:
     return OfferFilters(
+        city=city.strip().upper() if city else None,
         district=district,
         min_price=minPrice,
         max_price=maxPrice,

@@ -18,6 +18,7 @@ from backend.db.models import offers
 
 @dataclass
 class OfferFilters:
+    city: Optional[str] = None
     district: Optional[str] = None
     min_price: Optional[float] = None
     max_price: Optional[float] = None
@@ -40,6 +41,8 @@ SORTABLE_COLUMNS = {
 
 
 def _apply_filters(stmt: Select, filters: OfferFilters) -> Select:
+    if filters.city:
+        stmt = stmt.where(offers.c.city == filters.city)
     if filters.district:
         stmt = stmt.where(offers.c.district == filters.district)
     if filters.min_price is not None:
