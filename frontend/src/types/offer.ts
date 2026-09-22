@@ -46,6 +46,7 @@ export type SortOrder = "asc" | "desc";
 
 /** Query params accepted by GET /api/offers (and shared by /statistics, /analysis). */
 export interface OfferFilters {
+  city?: string;
   district?: string;
   minPrice?: number;
   maxPrice?: number;
