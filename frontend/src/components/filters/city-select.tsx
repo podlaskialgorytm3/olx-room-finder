@@ -29,7 +29,7 @@ export function CitySelect({ variant = "default", className }: CitySelectProps) 
       <SelectTrigger
         className={cn(
           variant === "heading" &&
-            "h-auto w-fit border-none bg-transparent p-0 text-inherit font-inherit shadow-none hover:opacity-80 focus-visible:ring-0 [&_svg]:size-5 [&_svg]:text-current",
+            "h-auto w-fit border-none bg-transparent p-0 text-[length:inherit] font-[inherit] leading-[inherit] tracking-[inherit] text-inherit shadow-none hover:opacity-80 focus-visible:ring-0 [&_svg]:size-5 [&_svg]:text-current",
           className,
         )}
       >
