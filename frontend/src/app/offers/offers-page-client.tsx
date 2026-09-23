@@ -29,7 +29,7 @@ export function OffersPageClient() {
 
   const query = useMemo(() => parseOffersQuery(searchParams), [searchParams]);
   const page = query.page ?? 1;
-  const limit = query.limit ?? 20;
+  const limit = query.limit ?? 18;
   const sort = query.sort ?? "created_at";
   const order = query.order ?? "desc";
 
