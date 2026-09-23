@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useCityStore, useSelectedCity, DEFAULT_CITY } from "@/lib/city-store";
 import { usePublicCities } from "@/hooks";
@@ -22,10 +23,16 @@ export function CitySelect({ variant = "default", className }: CitySelectProps) 
   const setCity = useCityStore((state) => state.setCity);
   const { data: cities, isLoading } = usePublicCities();
 
+  // Guards against a hydration mismatch: the fetched city list can resolve at a
+  // slightly different point in time on the server vs. the client, which would
+  // otherwise make the `disabled` attribute differ between SSR and first paint.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
   const currentLabel = cities?.find((c) => c.city === city)?.display_name ?? city ?? DEFAULT_CITY;
 
   return (
-    <Select value={city} onValueChange={setCity} disabled={isLoading || !cities?.length}>
+    <Select value={city} onValueChange={setCity} disabled={mounted ? isLoading || !cities?.length : true}>
       <SelectTrigger
         className={cn(
           variant === "heading" &&
