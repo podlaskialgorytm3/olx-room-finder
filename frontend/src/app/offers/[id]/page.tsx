@@ -64,14 +64,14 @@ export default function OfferDetailPage() {
 
       {/* Gallery */}
       <div className="space-y-2">
-        <div className="relative aspect-video w-full overflow-hidden rounded-xl bg-muted">
+        <div className="relative aspect-video w-full overflow-hidden rounded-xl bg-black">
           {photos.length > 0 ? (
             <Image
               src={photos[activePhoto]}
               alt={offer.title}
               fill
               unoptimized
-              className="object-cover"
+              className="object-contain"
               sizes="(min-width: 1024px) 768px, 100vw"
             />
           ) : (
