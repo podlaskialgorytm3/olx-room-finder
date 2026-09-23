@@ -30,11 +30,21 @@ export default function StatisticsPage() {
       {/* Overview KPIs */}
       <section className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <KpiCard label="Liczba ofert" value={formatNumber(overview.data?.count)} icon={Building2} isLoading={overview.isLoading} />
-        <KpiCard label="Średnia cena" value={formatPln(overview.data?.price.avg)} icon={TrendingUp} isLoading={overview.isLoading} />
-        <KpiCard label="Mediana ceny" value={formatPln(overview.data?.price.median)} icon={BarChart3} isLoading={overview.isLoading} />
+        <KpiCard
+          label="Średni koszt całkowity"
+          value={formatPln(overview.data?.total_monthly_cost.avg)}
+          icon={TrendingUp}
+          isLoading={overview.isLoading}
+        />
+        <KpiCard
+          label="Mediana kosztu całkowitego"
+          value={formatPln(overview.data?.total_monthly_cost.median)}
+          icon={BarChart3}
+          isLoading={overview.isLoading}
+        />
         <KpiCard
           label="Min / Max"
-          value={`${formatPln(overview.data?.price.min)} – ${formatPln(overview.data?.price.max)}`}
+          value={`${formatPln(overview.data?.total_monthly_cost.min)} – ${formatPln(overview.data?.total_monthly_cost.max)}`}
           icon={ArrowDownUp}
           isLoading={overview.isLoading}
         />
@@ -63,7 +73,7 @@ export default function StatisticsPage() {
       <section>
         <Card>
           <CardHeader>
-            <CardTitle>Mediana ceny wg dzielnicy</CardTitle>
+            <CardTitle>Mediana kosztu całkowitego wg dzielnicy</CardTitle>
           </CardHeader>
           <CardContent>
             {districts.isLoading && <Skeleton className="h-96 w-full" />}

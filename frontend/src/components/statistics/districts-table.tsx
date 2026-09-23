@@ -15,8 +15,8 @@ export function DistrictsTable({ data }: { data: DistrictStats[] }) {
           <TableRow>
             <TableHead>Dzielnica</TableHead>
             <TableHead className="text-right">Oferty</TableHead>
-            <TableHead className="text-right">Mediana ceny</TableHead>
-            <TableHead className="text-right">Śr. całkowity koszt</TableHead>
+            <TableHead className="text-right">Mediana kosztu całkowitego</TableHead>
+            <TableHead className="text-right">Śr. koszt całkowity</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -28,7 +28,7 @@ export function DistrictsTable({ data }: { data: DistrictStats[] }) {
                 </Link>
               </TableCell>
               <TableCell className="text-right">{formatNumber(row.count)}</TableCell>
-              <TableCell className="text-right">{formatPln(row.price.median)}</TableCell>
+              <TableCell className="text-right">{formatPln(row.total_monthly_cost.median)}</TableCell>
               <TableCell className="text-right">{formatPln(row.total_monthly_cost.avg)}</TableCell>
             </TableRow>
           ))}

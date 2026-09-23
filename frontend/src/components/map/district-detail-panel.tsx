@@ -44,9 +44,9 @@ export function DistrictDetailPanel({ district, onClose }: DistrictDetailPanelPr
           <>
             <div className="grid grid-cols-2 gap-3 text-sm">
               <Stat label="Liczba ofert" value={formatNumber(data.count)} />
-              <Stat label="Mediana ceny" value={formatPln(data.price.median)} />
-              <Stat label="Średnia cena" value={formatPln(data.price.avg)} />
+              <Stat label="Mediana kosztu całkowitego" value={formatPln(data.total_monthly_cost.median)} />
               <Stat label="Śr. koszt całkowity" value={formatPln(data.total_monthly_cost.avg)} />
+              <Stat label="Śr. cena bazowa" value={formatPln(data.price.avg)} />
             </div>
             <Button asChild className="w-full">
               <Link href={`/offers?district=${encodeURIComponent(district)}`}>

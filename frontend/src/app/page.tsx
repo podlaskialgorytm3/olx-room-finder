@@ -108,20 +108,20 @@ export default function HomePage() {
           isLoading={overview.isLoading}
         />
         <KpiCard
-          label="Średnia cena"
-          value={formatPln(overview.data?.price.avg)}
+          label="Średni koszt całkowity"
+          value={formatPln(overview.data?.total_monthly_cost.avg)}
           icon={TrendingUp}
           isLoading={overview.isLoading}
         />
         <KpiCard
-          label="Mediana ceny"
-          value={formatPln(overview.data?.price.median)}
+          label="Mediana kosztu całkowitego"
+          value={formatPln(overview.data?.total_monthly_cost.median)}
           icon={BarChart3}
           isLoading={overview.isLoading}
         />
         <KpiCard
-          label="Średni całkowity koszt"
-          value={formatPln(overview.data?.total_monthly_cost.avg)}
+          label="Min / Max kosztu całkowitego"
+          value={`${formatPln(overview.data?.total_monthly_cost.min)} – ${formatPln(overview.data?.total_monthly_cost.max)}`}
           icon={Wallet}
           isLoading={overview.isLoading}
         />
