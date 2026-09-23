@@ -54,9 +54,13 @@ export default function OfferDetailPage() {
   }
 
   const photos = offer.photos ?? [];
-  const median = districtStats?.price.median ?? null;
-  const diff = median !== null && offer.price !== null ? offer.price - median : null;
-  const diffPercent = median && offer.price !== null ? ((offer.price - median) / median) * 100 : null;
+  // Porównanie z medianą dzielnicy ma opierać się na całkowitym koszcie
+  // miesięcznym (czynsz + dodatkowe opłaty), a nie samej cenie bazowej -
+  // to on odzwierciedla realny koszt najmu i jest spójny z resztą statystyk.
+  const offerTotalCost = offer.total_monthly_cost ?? offer.price;
+  const median = districtStats?.total_monthly_cost.median ?? null;
+  const diff = median !== null && offerTotalCost !== null ? offerTotalCost - median : null;
+  const diffPercent = median && offerTotalCost !== null ? ((offerTotalCost - median) / median) * 100 : null;
 
   return (
     <div className="mx-auto max-w-4xl space-y-6 px-4 py-8">
@@ -165,7 +169,7 @@ export default function OfferDetailPage() {
           </p>
         ) : (
           <div className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
-            <Fact label="Cena oferty" value={formatPln(offer.price)} />
+            <Fact label="Cena oferty (całk. koszt mies.)" value={formatPln(offerTotalCost)} />
             <Fact label="Mediana dzielnicy" value={formatPln(median)} />
             <Fact label="Różnica" value={formatPln(diff)} />
             <Fact label="Różnica %" value={formatPercent(diffPercent)} />
