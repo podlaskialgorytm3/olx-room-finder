@@ -10,6 +10,7 @@ export interface CityConfig {
   sync_minute: number;
   offers_count: number;
   running: boolean;
+  cancelling: boolean;
   last_run: SyncRun | null;
 }
 
@@ -29,6 +30,11 @@ export interface CityConfigUpdate {
 }
 
 export interface CitySyncTrigger {
+  status: string;
+  city: string;
+}
+
+export interface CitySyncCancel {
   status: string;
   city: string;
 }

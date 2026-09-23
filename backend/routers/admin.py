@@ -15,6 +15,7 @@ from backend.schemas.admin import (
     CityConfigOut,
     CityConfigUpdateIn,
     CityDeleteOut,
+    CitySyncCancelOut,
     CitySyncTriggerOut,
 )
 from backend.schemas.sync import SyncRunOut
@@ -34,6 +35,7 @@ def _city_config_out(config: dict) -> CityConfigOut:
         sync_minute=config["sync_minute"],
         offers_count=sync_service.count_offers(city),
         running=sync_service.is_sync_running(city),
+        cancelling=sync_service.is_sync_cancelling(city),
         last_run=SyncRunOut(**last_run) if last_run else None,
     )
 
@@ -108,3 +110,15 @@ def trigger_city_sync(city: str) -> CitySyncTriggerOut:
     if not started:
         raise HTTPException(status_code=409, detail=f"Synchronizacja miasta {city} już trwa.")
     return CitySyncTriggerOut(status="started", city=city)
+
+
+@router.post("/cities/{city}/sync/cancel", response_model=CitySyncCancelOut)
+def cancel_city_sync(city: str) -> CitySyncCancelOut:
+    city = city.upper()
+    if sync_service.get_city_config(city) is None:
+        raise HTTPException(status_code=404, detail=f"Nieznane miasto: {city}")
+
+    cancelled = sync_service.request_cancel_sync(city)
+    if not cancelled:
+        raise HTTPException(status_code=409, detail=f"Synchronizacja miasta {city} nie jest aktualnie uruchomiona.")
+    return CitySyncCancelOut(status="cancelling", city=city)

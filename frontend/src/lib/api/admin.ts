@@ -1,6 +1,6 @@
 import { apiFetch } from "./client";
 import { authHeaders } from "./auth";
-import type { CityConfig, CityConfigCreate, CityConfigUpdate, CityDelete, CitySyncTrigger } from "@/types";
+import type { CityConfig, CityConfigCreate, CityConfigUpdate, CityDelete, CitySyncCancel, CitySyncTrigger } from "@/types";
 
 export function getCities(): Promise<CityConfig[]> {
   return apiFetch<CityConfig[]>("/api/admin/cities", { headers: authHeaders() });
@@ -31,6 +31,13 @@ export function deleteCity(city: string): Promise<CityDelete> {
 
 export function triggerCitySync(city: string): Promise<CitySyncTrigger> {
   return apiFetch<CitySyncTrigger>(`/api/admin/cities/${city}/sync`, {
+    method: "POST",
+    headers: authHeaders(),
+  });
+}
+
+export function cancelCitySync(city: string): Promise<CitySyncCancel> {
+  return apiFetch<CitySyncCancel>(`/api/admin/cities/${city}/sync/cancel`, {
     method: "POST",
     headers: authHeaders(),
   });

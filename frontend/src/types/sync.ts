@@ -9,13 +9,3 @@ export interface SyncRun {
   offers_removed: number | null;
   max_page: number | null;
 }
-
-export interface SyncStatus {
-  running: boolean;
-  offers_count: number;
-  last_run: SyncRun | null;
-}
-
-export interface SyncTrigger {
-  status: string;
-}

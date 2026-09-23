@@ -15,6 +15,7 @@ import { ErrorState } from "@/components/common/error-state";
 import { useAdminAuthHydrated, useAdminAuthStore } from "@/lib/admin-auth-store";
 import {
   useAdminLogout,
+  useCancelCitySync,
   useCityConfigs,
   useCreateCity,
   useDeleteCity,
@@ -32,6 +33,7 @@ function CityRow({ config }: { config: CityConfig }) {
   const [link, setLink] = useState(config.link ?? "");
   const updateCity = useUpdateCitySyncHour();
   const triggerSync = useTriggerCitySync();
+  const cancelSync = useCancelCitySync();
   const deleteCity = useDeleteCity();
 
   const dirty =
@@ -63,6 +65,20 @@ function CityRow({ config }: { config: CityConfig }) {
           toast.info("Synchronizacja tego miasta już trwa.");
         } else {
           toast.error("Nie udało się uruchomić synchronizacji.");
+        }
+      },
+    });
+  };
+
+  const handleCancelSync = () => {
+    cancelSync.mutate(config.city, {
+      onSuccess: () =>
+        toast.success(`Anulowano synchronizację miasta ${config.display_name}. Dotychczas pobrane oferty zostały zapisane.`),
+      onError: (err) => {
+        if (err instanceof ApiError && err.status === 409) {
+          toast.info("Ta synchronizacja już się zakończyła.");
+        } else {
+          toast.error("Nie udało się anulować synchronizacji.");
         }
       },
     });
@@ -114,7 +130,7 @@ function CityRow({ config }: { config: CityConfig }) {
       <TableCell>
         {config.running ? (
           <Badge variant="secondary" className="animate-pulse">
-            W trakcie…
+            {config.cancelling ? "Anulowanie…" : "W trakcie…"}
           </Badge>
         ) : (
           <span className="text-xs text-muted-foreground">
@@ -127,15 +143,27 @@ function CityRow({ config }: { config: CityConfig }) {
           <Button size="sm" variant="outline" onClick={handleSave} disabled={!dirty || updateCity.isPending}>
             Zapisz
           </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={handleSyncNow}
-            disabled={config.running || triggerSync.isPending}
-          >
-            <RefreshCw className={`size-3.5 ${triggerSync.isPending ? "animate-spin" : ""}`} />
-            Synchronizuj
-          </Button>
+          {config.running ? (
+            <Button
+              size="sm"
+              variant="outline"
+              className="text-destructive hover:bg-destructive/10"
+              onClick={handleCancelSync}
+              disabled={config.cancelling || cancelSync.isPending}
+            >
+              Anuluj synchronizację
+            </Button>
+          ) : (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleSyncNow}
+              disabled={triggerSync.isPending}
+            >
+              <RefreshCw className={`size-3.5 ${triggerSync.isPending ? "animate-spin" : ""}`} />
+              Synchronizuj
+            </Button>
+          )}
           <Button
             size="sm"
             variant="outline"

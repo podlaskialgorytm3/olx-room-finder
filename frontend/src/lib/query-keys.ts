@@ -21,7 +21,6 @@ export const queryKeys = {
   costDistribution: (metric: AnalysisMetric, binSize: number | undefined, filters: OfferFilters) =>
     ["analysis", "cost-distribution", metric, binSize, filters] as const,
   valueScore: (filters: OfferFilters) => ["analysis", "value", filters] as const,
-  syncStatus: () => ["sync", "status"] as const,
   adminCities: () => ["admin", "cities"] as const,
   publicCities: () => ["cities", "public"] as const,
 };

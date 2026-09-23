@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { SyncIndicator } from "@/components/layout/sync-indicator";
 
 const NAV_LINKS = [
   { href: "/", label: "Szukaj" },
@@ -40,7 +39,6 @@ export function Navbar() {
         </nav>
 
         <div className="hidden items-center gap-3 md:flex">
-          <SyncIndicator />
           <Link
             href="/admin"
             className="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"

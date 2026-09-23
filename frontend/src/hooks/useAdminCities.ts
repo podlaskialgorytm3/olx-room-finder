@@ -57,3 +57,13 @@ export function useTriggerCitySync() {
     },
   });
 }
+
+export function useCancelCitySync() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (city: string) => adminApi.cancelCitySync(city),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.adminCities() });
+    },
+  });
+}

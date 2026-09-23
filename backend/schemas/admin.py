@@ -17,6 +17,7 @@ class CityConfigOut(BaseModel):
     sync_minute: int
     offers_count: int
     running: bool
+    cancelling: bool = False
     last_run: Optional[SyncRunOut] = None
 
 
@@ -52,6 +53,11 @@ class CityConfigUpdateIn(BaseModel):
 
 
 class CitySyncTriggerOut(BaseModel):
+    status: str
+    city: str
+
+
+class CitySyncCancelOut(BaseModel):
     status: str
     city: str
 

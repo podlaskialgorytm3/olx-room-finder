@@ -1238,7 +1238,7 @@ def build_full_row(offer: RoomOffer) -> dict[str, Any]:
 # SYNCHRONIZACJA
 # ==========================================================================
 
-def sync_once(city: str = DEFAULT_CITY) -> None:
+def sync_once(city: str = DEFAULT_CITY, cancel_event: Optional[threading.Event] = None) -> None:
     logger.info("Start synchronizacji z OLX (miasto=%s) -> baza %s", city, DB_FILE)
     init_db()
 
@@ -1270,7 +1270,16 @@ def sync_once(city: str = DEFAULT_CITY) -> None:
 
     new_ids_list = sorted(ids_to_add)
     added_count = 0
+    cancelled = False
     for index, offer_id in enumerate(new_ids_list):
+        if cancel_event is not None and cancel_event.is_set():
+            logger.info(
+                "Synchronizacja miasta=%s anulowana przez administratora - zapisuję %d/%d pobranych dotąd ofert.",
+                city, added_count, len(new_ids_list),
+            )
+            cancelled = True
+            break
+
         offer = current_by_id[offer_id]
         logger.info("Pobieranie nowego ogłoszenia %d/%d (id=%s, miasto=%s)", index + 1, len(new_ids_list), offer_id, city)
 
@@ -1284,14 +1293,14 @@ def sync_once(city: str = DEFAULT_CITY) -> None:
             continue
 
         # Pojedynczy INSERT od razu po pobraniu - żaden nowy rekord nie ginie
-        # w razie przerwania synchronizacji w połowie, a tabela nie jest
-        # nigdy przepisywana w całości.
+        # w razie przerwania synchronizacji w połowie (ani przez anulowanie,
+        # ani przez awarię), a tabela nie jest nigdy przepisywana w całości.
         insert_offer(row, city)
         added_count += 1
 
     logger.info(
-        "Zakończono synchronizację miasta=%s. Usunięto: %d, dodano: %d, łącznie w bazie (to miasto): %d.",
-        city, removed_count, added_count, count_offers(city),
+        "Zakończono synchronizację miasta=%s%s. Usunięto: %d, dodano: %d, łącznie w bazie (to miasto): %d.",
+        city, " (anulowana)" if cancelled else "", removed_count, added_count, count_offers(city),
     )
     finish_sync_run(
         run_id,
@@ -1311,6 +1320,13 @@ _locks_guard = threading.Lock()
 _scheduler_lock = threading.Lock()
 _scheduler_started = False
 
+# Zdarzenia sygnalizujące żądanie anulowania trwającej synchronizacji danego
+# miasta (ustawiane przez `request_cancel_sync`, sprawdzane w pętli
+# `sync_once`). Trzymane osobno od `_sync_locks`, bo blokada mówi *czy*
+# synchronizacja trwa, a to zdarzenie mówi *czy ktoś poprosił o jej
+# przerwanie* - obie informacje są potrzebne niezależnie w panelu admina.
+_cancel_events: dict[str, threading.Event] = {}
+
 # Częstotliwość sprawdzania harmonogramu per-miasto (w sekundach). Sprawdzanie
 # co minutę wystarcza, bo granulacja godziny synchronizacji to godzina:minuta.
 SCHEDULER_POLL_INTERVAL_SECONDS = 30
@@ -1323,11 +1339,37 @@ def _get_city_lock(city: str) -> threading.Lock:
         return _sync_locks[city]
 
 
+def _get_cancel_event(city: str) -> threading.Event:
+    with _locks_guard:
+        if city not in _cancel_events:
+            _cancel_events[city] = threading.Event()
+        return _cancel_events[city]
+
+
 def is_sync_running(city: Optional[str] = None) -> bool:
     if city:
         return _get_city_lock(city).locked()
     with _locks_guard:
         return any(lock.locked() for lock in _sync_locks.values())
+
+
+def is_sync_cancelling(city: str) -> bool:
+    """True, gdy dla danego miasta trwa synchronizacja, dla której poproszono
+    już o anulowanie (ale jeszcze nie zdążyła się dokończyć/zapisać)."""
+    return is_sync_running(city) and _get_cancel_event(city).is_set()
+
+
+def request_cancel_sync(city: str) -> bool:
+    """Sygnalizuje trwającej synchronizacji miasta, żeby przerwała pobieranie
+    kolejnych ofert po zakończeniu aktualnie przetwarzanej. Dane pobrane do
+    tego momentu są już zapisane w bazie (insert następuje od razu po każdej
+    ofercie), więc anulowanie nie traci wcześniejszego postępu.
+
+    Zwraca False, jeśli dla tego miasta nie trwa żadna synchronizacja."""
+    if not is_sync_running(city):
+        return False
+    _get_cancel_event(city).set()
+    return True
 
 
 def _run_sync_guarded(city: str = DEFAULT_CITY) -> None:
@@ -1339,11 +1381,14 @@ def _run_sync_guarded(city: str = DEFAULT_CITY) -> None:
     if not lock.acquire(blocking=False):
         logger.info("Synchronizacja miasta=%s już trwa - pomijam to wywołanie.", city)
         return
+    cancel_event = _get_cancel_event(city)
+    cancel_event.clear()
     try:
-        sync_once(city)
+        sync_once(city, cancel_event=cancel_event)
     except Exception:  # noqa: BLE001
         logger.exception("Niespodziewany błąd podczas synchronizacji miasta=%s.", city)
     finally:
+        cancel_event.clear()
         lock.release()
 
 
