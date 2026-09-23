@@ -51,7 +51,7 @@ def overview(repo: OfferRepository, filters: OfferFilters) -> dict:
 
 def districts_overview(repo: OfferRepository, filters: OfferFilters) -> list[dict]:
     result = []
-    for district in repo.distinct_districts():
+    for district in repo.distinct_districts(city=filters.city):
         district_filters = OfferFilters(**{**filters.__dict__, "district": district})
         result.append(_district_stats(repo, district_filters, district))
     return result

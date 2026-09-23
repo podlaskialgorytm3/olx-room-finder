@@ -75,7 +75,7 @@ def initial_cost(repo: OfferRepository, filters: OfferFilters) -> list[dict]:
 
 def districts_comparison(repo: OfferRepository, filters: OfferFilters) -> list[dict]:
     result = []
-    for district in repo.distinct_districts():
+    for district in repo.distinct_districts(city=filters.city):
         district_filters = OfferFilters(**{**filters.__dict__, "district": district})
         rows = repo.rows_for_filters(
             district_filters,

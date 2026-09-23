@@ -142,13 +142,15 @@ class OfferRepository:
         stmt = _apply_filters(select(column), filters)
         return [row[0] for row in self.db.execute(stmt).all()]
 
-    def distinct_districts(self) -> list[str]:
+    def distinct_districts(self, city: Optional[str] = None) -> list[str]:
         stmt = (
             select(offers.c.district)
             .where(offers.c.district.is_not(None))
             .distinct()
             .order_by(offers.c.district)
         )
+        if city:
+            stmt = stmt.where(offers.c.city == city)
         return [row[0] for row in self.db.execute(stmt).all()]
 
     def count_for_filters(self, filters: OfferFilters) -> int:
