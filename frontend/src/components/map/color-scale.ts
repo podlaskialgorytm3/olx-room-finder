@@ -13,6 +13,8 @@ export function getMetricValue(value: DistrictMetricValue | undefined, metric: M
       return value.medianPrice;
     case "avg_total_cost":
       return value.avgTotalCost;
+    case "median_total_cost":
+      return value.medianTotalCost;
     default:
       return null;
   }
