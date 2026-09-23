@@ -7,7 +7,7 @@ import { ErrorState } from "@/components/common/error-state";
 import { EmptyState } from "@/components/common/empty-state";
 import { usePriceVsDistrict } from "@/hooks";
 import { formatPercent, formatPln } from "@/lib/format";
-import { cn } from "@/lib/utils";
+import { getPriceDiffColor } from "@/lib/price-diff-color";
 
 export function PriceVsDistrictPanel() {
   const { data, isLoading, isError, refetch } = usePriceVsDistrict();
@@ -42,10 +42,11 @@ export function PriceVsDistrictPanel() {
                   </p>
                 </div>
                 <span
-                  className={cn(
-                    "shrink-0 font-semibold",
-                    (item.difference_percent ?? 0) < 0 ? "text-emerald-600" : "text-amber-600",
-                  )}
+                  className="shrink-0 rounded-full px-2 py-0.5 font-semibold"
+                  style={{
+                    color: getPriceDiffColor(item.difference_percent).text,
+                    backgroundColor: getPriceDiffColor(item.difference_percent).background,
+                  }}
                 >
                   {formatPercent(item.difference_percent)}
                 </span>

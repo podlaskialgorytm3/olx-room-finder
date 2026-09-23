@@ -13,6 +13,7 @@ import { Separator } from "@/components/ui/separator";
 import { ErrorState } from "@/components/common/error-state";
 import { PhotoLightbox } from "@/components/offers/photo-lightbox";
 import { formatCity, formatPercent, formatPln, formatTriState } from "@/lib/format";
+import { getPriceDiffColor } from "@/lib/price-diff-color";
 import { cn } from "@/lib/utils";
 
 export default function OfferDetailPage() {
@@ -171,8 +172,8 @@ export default function OfferDetailPage() {
           <div className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
             <Fact label="Cena oferty (całk. koszt mies.)" value={formatPln(offerTotalCost)} />
             <Fact label="Mediana dzielnicy" value={formatPln(median)} />
-            <Fact label="Różnica" value={formatPln(diff)} />
-            <Fact label="Różnica %" value={formatPercent(diffPercent)} />
+            <Fact label="Różnica" value={formatPln(diff)} color={getPriceDiffColor(diffPercent)} />
+            <Fact label="Różnica %" value={formatPercent(diffPercent)} color={getPriceDiffColor(diffPercent)} />
           </div>
         )}
       </div>
@@ -188,11 +189,16 @@ export default function OfferDetailPage() {
   );
 }
 
-function Fact({ label, value }: { label: string; value: string }) {
+function Fact({ label, value, color }: { label: string; value: string; color?: { text: string; background: string } }) {
   return (
-    <div className="rounded-lg border border-border bg-card px-3 py-2">
+    <div
+      className="rounded-lg border border-border bg-card px-3 py-2"
+      style={color ? { backgroundColor: color.background, borderColor: color.text } : undefined}
+    >
       <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="font-semibold">{value}</p>
+      <p className="font-semibold" style={color ? { color: color.text } : undefined}>
+        {value}
+      </p>
     </div>
   );
 }
