@@ -9,18 +9,22 @@ import { DistrictsTable } from "@/components/statistics/districts-table";
 import { ErrorState } from "@/components/common/error-state";
 import { EmptyState } from "@/components/common/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useDistrictStatistics, useStatisticsOverview } from "@/hooks";
-import { formatNumber, formatPln } from "@/lib/format";
+import { useDistrictStatistics, useStatisticsOverview, usePublicCities } from "@/hooks";
+import { useSelectedCity, DEFAULT_CITY } from "@/lib/city-store";
+import { formatCity, formatNumber, formatPln } from "@/lib/format";
 
 export default function StatisticsPage() {
   const overview = useStatisticsOverview();
   const districts = useDistrictStatistics();
+  const selectedCity = useSelectedCity();
+  const { data: cities } = usePublicCities();
+  const cityLabel = cities?.find((c) => c.city === selectedCity)?.display_name ?? formatCity(selectedCity ?? DEFAULT_CITY);
 
   return (
     <div className="mx-auto max-w-7xl space-y-8 px-4 py-8 sm:px-6 lg:px-8">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Statystyki rynku</h1>
-        <p className="mt-1 text-muted-foreground">Zbiorczy przegląd cen i kosztów ofert pokoi w Warszawie.</p>
+        <p className="mt-1 text-muted-foreground">Zbiorczy przegląd cen i kosztów ofert pokoi w mieście {cityLabel}.</p>
       </div>
 
       {/* Overview KPIs */}
@@ -35,6 +39,13 @@ export default function StatisticsPage() {
           isLoading={overview.isLoading}
         />
       </section>
+
+      {overview.data && overview.data.count === 0 && (
+        <EmptyState
+          title={`Brak ofert dla miasta ${cityLabel}`}
+          description="Nie mamy jeszcze zebranych danych statystycznych dla tego miasta. Spróbuj wybrać inne miasto."
+        />
+      )}
 
       {/* Price distribution */}
       <section>
