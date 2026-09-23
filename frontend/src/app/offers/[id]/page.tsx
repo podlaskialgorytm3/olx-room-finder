@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import { ErrorState } from "@/components/common/error-state";
+import { PhotoLightbox } from "@/components/offers/photo-lightbox";
 import { formatCity, formatPercent, formatPln, formatTriState } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -20,6 +21,7 @@ export default function OfferDetailPage() {
   const { data: offer, isLoading, isError, refetch } = useOffer(params.id);
   const { data: districtStats } = useDistrictStatisticsByName(offer?.district ?? undefined);
   const [activePhoto, setActivePhoto] = useState(0);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
 
   const handleBack = () => {
     // Wracamy przez historię przeglądarki, żeby przywrócić poprzedni URL
@@ -66,14 +68,21 @@ export default function OfferDetailPage() {
       <div className="space-y-2">
         <div className="relative aspect-video w-full overflow-hidden rounded-xl bg-black">
           {photos.length > 0 ? (
-            <Image
-              src={photos[activePhoto]}
-              alt={offer.title}
-              fill
-              unoptimized
-              className="object-contain"
-              sizes="(min-width: 1024px) 768px, 100vw"
-            />
+            <button
+              type="button"
+              onClick={() => setLightboxOpen(true)}
+              className="absolute inset-0 cursor-zoom-in"
+              aria-label="Powiększ zdjęcie"
+            >
+              <Image
+                src={photos[activePhoto]}
+                alt={offer.title}
+                fill
+                unoptimized
+                className="object-contain"
+                sizes="(min-width: 1024px) 768px, 100vw"
+              />
+            </button>
           ) : (
             <div className="flex h-full w-full items-center justify-center text-muted-foreground">
               <ImageOff className="size-10" />
@@ -97,6 +106,15 @@ export default function OfferDetailPage() {
           </div>
         )}
       </div>
+
+      <PhotoLightbox
+        photos={photos}
+        index={activePhoto}
+        onIndexChange={setActivePhoto}
+        open={lightboxOpen}
+        onOpenChange={setLightboxOpen}
+        alt={offer.title}
+      />
 
       {/* Title + price */}
       <div className="space-y-2">
