@@ -39,10 +39,10 @@ export function OfferCard({ offer }: { offer: Offer }) {
         </div>
       </Link>
 
-      <CardContent className="flex flex-col gap-2 px-4 pt-4">
+      <CardContent className="flex flex-col gap-3 px-4 pt-4 pb-3">
         <Link
           href={`/offers/${offer.id}`}
-          className="line-clamp-2 min-h-10 font-medium leading-tight transition-colors group-hover:text-primary"
+          className="line-clamp-2 min-h-[2.75rem] leading-snug font-medium transition-colors group-hover:text-primary"
         >
           {offer.title}
         </Link>
@@ -62,7 +62,7 @@ export function OfferCard({ offer }: { offer: Offer }) {
           )}
         </div>
 
-        <div className="flex flex-wrap gap-1.5 text-xs">
+        <div className="mb-1 flex flex-wrap gap-1.5 text-xs">
           <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-1 text-muted-foreground">
             <Wallet className="size-3.5" /> Kaucja: {offer.has_deposit === false ? "brak" : formatPln(offer.deposit)}
           </span>
@@ -76,7 +76,7 @@ export function OfferCard({ offer }: { offer: Offer }) {
         </div>
       </CardContent>
 
-      <CardFooter className="px-4 pb-4">
+      <CardFooter className="px-4 pt-3 pb-4">
         <Button asChild className="w-full transition-transform group-hover:scale-[1.02]" size="sm" variant="secondary">
           <Link href={`/offers/${offer.id}`}>Zobacz ogłoszenie</Link>
         </Button>
