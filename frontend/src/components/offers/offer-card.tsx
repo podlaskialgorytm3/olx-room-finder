@@ -28,11 +28,10 @@ export function OfferCard({ offer }: { offer: Offer }) {
               <ImageOff className="size-8" />
             </div>
           )}
-          {offer.district && (
-            <Badge className="absolute left-2 top-2 bg-background/90 text-foreground shadow" variant="secondary">
-              <MapPin className="size-3" /> {formatCity(offer.city)}, {offer.district}
-            </Badge>
-          )}
+          <Badge className="absolute left-2 top-2 bg-background/90 text-foreground shadow" variant="secondary">
+            <MapPin className="size-3" /> {formatCity(offer.city)}
+            {offer.district ? `, ${offer.district}` : ""}
+          </Badge>
         </div>
       </Link>
 
