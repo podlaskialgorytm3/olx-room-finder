@@ -18,11 +18,14 @@ import hashlib
 import secrets
 from contextlib import closing
 from dataclasses import dataclass
+from datetime import datetime, timedelta
 from typing import Literal, Optional
 
 from backend.services.sync_service import get_connection
 
 PBKDF2_ITERATIONS = 200_000
+SESSION_TTL_HOURS = 24 * 7
+DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S"
 
 UserRole = Literal["tenant", "landlord"]
 UserStatus = Literal["pending", "approved", "rejected"]
@@ -34,6 +37,19 @@ USER_COLUMNS = (
 
 class EmailAlreadyExistsError(Exception):
     """Podniesione, gdy adres e-mail jest już zajęty przez inne konto."""
+
+
+class InvalidCredentialsError(Exception):
+    """Podniesione, gdy e-mail nie istnieje albo hasło jest nieprawidłowe."""
+
+
+class AccountNotApprovedError(Exception):
+    """Podniesione przy próbie logowania na konto `pending`/`rejected`
+    (dotyczy głównie wynajmujących czekających na zatwierdzenie)."""
+
+    def __init__(self, status: UserStatus) -> None:
+        self.status = status
+        super().__init__(status)
 
 
 @dataclass(frozen=True)
@@ -212,3 +228,71 @@ def delete_user(user_id: int) -> bool:
         cursor = conn.execute("DELETE FROM users WHERE id = ?", (user_id,))
         conn.commit()
         return cursor.rowcount > 0
+
+
+# --- Logowanie / sesje ------------------------------------------------------
+
+
+def verify_credentials(email: str, password: str) -> dict:
+    """Sprawdza e-mail/hasło i zwraca dane konta.
+
+    Podnosi `InvalidCredentialsError` gdy e-mail nie istnieje lub hasło jest
+    złe, a `AccountNotApprovedError` gdy konto istnieje i hasło jest
+    poprawne, ale status to `pending`/`rejected` (konto wynajmującego
+    czekające na/odrzucone przy zatwierdzeniu)."""
+    email = email.strip().lower()
+    with closing(get_connection()) as conn:
+        row = conn.execute(
+            f"SELECT {', '.join(USER_COLUMNS)}, password_hash, salt FROM users WHERE email = ?",
+            (email,),
+        ).fetchone()
+
+    if row is None:
+        raise InvalidCredentialsError("Nieprawidłowy e-mail lub hasło.")
+
+    *user_values, password_hash, salt_hex = row
+    candidate_hash = _hash_password(password, bytes.fromhex(salt_hex))
+    if not secrets.compare_digest(password_hash, candidate_hash):
+        raise InvalidCredentialsError("Nieprawidłowy e-mail lub hasło.")
+
+    user = _row_to_dict(user_values)
+    if user["status"] != "approved":
+        raise AccountNotApprovedError(user["status"])
+    return user
+
+
+def create_session(user_id: int) -> tuple[str, str]:
+    """Tworzy nową sesję dla zalogowanego użytkownika. Zwraca (token, expires_at)."""
+    token = secrets.token_urlsafe(32)
+    expires_at = (datetime.utcnow() + timedelta(hours=SESSION_TTL_HOURS)).strftime(DATETIME_FORMAT)
+    with closing(get_connection()) as conn:
+        conn.execute(
+            "INSERT INTO user_sessions (token, user_id, expires_at) VALUES (?, ?, ?)",
+            (token, user_id, expires_at),
+        )
+        conn.commit()
+    return token, expires_at
+
+
+def validate_token(token: str) -> Optional[dict]:
+    """Zwraca dane użytkownika, jeśli token jest ważny, w przeciwnym razie None."""
+    with closing(get_connection()) as conn:
+        row = conn.execute(
+            "SELECT user_id, expires_at FROM user_sessions WHERE token = ?",
+            (token,),
+        ).fetchone()
+        if row is None:
+            return None
+        user_id, expires_at = row
+        if datetime.strptime(expires_at, DATETIME_FORMAT) < datetime.utcnow():
+            conn.execute("DELETE FROM user_sessions WHERE token = ?", (token,))
+            conn.commit()
+            return None
+
+    return get_user(user_id)
+
+
+def invalidate_token(token: str) -> None:
+    with closing(get_connection()) as conn:
+        conn.execute("DELETE FROM user_sessions WHERE token = ?", (token,))
+        conn.commit()

@@ -43,6 +43,17 @@ class UserRegisterOut(BaseModel):
     message: str
 
 
+class UserLoginIn(BaseModel):
+    email: EmailStr
+    password: str = Field(min_length=1)
+
+
+class UserLoginOut(BaseModel):
+    token: str
+    expires_at: str
+    user: UserOut
+
+
 class UserListOut(BaseModel):
     data: list[UserOut]
     pagination: "UserPagination"

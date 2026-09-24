@@ -849,6 +849,16 @@ CREATE TABLE IF NOT EXISTS users (
 );
 CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
 CREATE INDEX IF NOT EXISTS idx_users_status ON users(status);
+
+-- Aktywne sesje (tokeny) zalogowanych użytkowników serwisu (najemcy i
+-- zatwierdzeni wynajmujący) - analogicznie do `admin_sessions`, ale osobno,
+-- bo konta admina i konta użytkowników to niezależne systemy logowania.
+CREATE TABLE IF NOT EXISTS user_sessions (
+    token TEXT PRIMARY KEY,
+    user_id INTEGER NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    expires_at TEXT NOT NULL
+);
 """
 
 OFFER_COLUMNS = [
