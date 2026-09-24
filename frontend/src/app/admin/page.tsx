@@ -11,7 +11,9 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ErrorState } from "@/components/common/error-state";
+import { RoomsManagementPanel } from "@/components/admin/rooms-management-panel";
 import { useAdminAuthHydrated, useAdminAuthStore } from "@/lib/admin-auth-store";
 import {
   useAdminLogout,
@@ -325,50 +327,63 @@ export default function AdminDashboardPage() {
         </Button>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Dodaj miasto</CardTitle>
-          <CardDescription>
-            Podaj link do listingu OLX kategorii pokoje/stancje dla nowego miasta (np.{" "}
-            <code>https://www.olx.pl/nieruchomosci/stancje-pokoje/lublin/</code>). Inne linki zostaną odrzucone.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <AddCityForm />
-        </CardContent>
-      </Card>
+      <Tabs defaultValue="cities">
+        <TabsList>
+          <TabsTrigger value="cities">Zarządzanie miastami</TabsTrigger>
+          <TabsTrigger value="rooms">Zarządzanie pokojami</TabsTrigger>
+        </TabsList>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Miasta i synchronizacja</CardTitle>
-          <CardDescription>
-            Zarządzaj miastami, ich linkami OLX oraz godziną codziennej synchronizacji - albo uruchom ją od razu.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {cities.isLoading && <Skeleton className="h-64 w-full" />}
-          {cities.isError && <ErrorState onRetry={() => cities.refetch()} />}
-          {cities.data && (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Miasto</TableHead>
-                  <TableHead>Link OLX</TableHead>
-                  <TableHead>Godzina synchronizacji</TableHead>
-                  <TableHead>Liczba ofert</TableHead>
-                  <TableHead>Ostatnia synchronizacja</TableHead>
-                  <TableHead className="text-right">Akcje</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {cities.data.map((config) => (
-                  <CityRow key={config.city} config={config} />
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+        <TabsContent value="cities" className="space-y-8">
+          <Card>
+            <CardHeader>
+              <CardTitle>Dodaj miasto</CardTitle>
+              <CardDescription>
+                Podaj link do listingu OLX kategorii pokoje/stancje dla nowego miasta (np.{" "}
+                <code>https://www.olx.pl/nieruchomosci/stancje-pokoje/lublin/</code>). Inne linki zostaną odrzucone.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <AddCityForm />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Miasta i synchronizacja</CardTitle>
+              <CardDescription>
+                Zarządzaj miastami, ich linkami OLX oraz godziną codziennej synchronizacji - albo uruchom ją od razu.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {cities.isLoading && <Skeleton className="h-64 w-full" />}
+              {cities.isError && <ErrorState onRetry={() => cities.refetch()} />}
+              {cities.data && (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Miasto</TableHead>
+                      <TableHead>Link OLX</TableHead>
+                      <TableHead>Godzina synchronizacji</TableHead>
+                      <TableHead>Liczba ofert</TableHead>
+                      <TableHead>Ostatnia synchronizacja</TableHead>
+                      <TableHead className="text-right">Akcje</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {cities.data.map((config) => (
+                      <CityRow key={config.city} config={config} />
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="rooms">
+          <RoomsManagementPanel />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

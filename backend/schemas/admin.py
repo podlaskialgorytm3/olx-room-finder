@@ -4,6 +4,7 @@ from typing import Optional
 
 from pydantic import BaseModel, Field, field_validator
 
+from backend.schemas.offer import OfferDetailOut, Pagination
 from backend.schemas.sync import SyncRunOut
 
 CITY_CODE_PATTERN = r"^[A-Za-z0-9_]{2,50}$"
@@ -65,3 +66,51 @@ class CitySyncCancelOut(BaseModel):
 class CityDeleteOut(BaseModel):
     status: str
     city: str
+
+
+class OfferAdminListOut(BaseModel):
+    data: list[OfferDetailOut]
+    pagination: Pagination
+
+
+class OfferUpdateIn(BaseModel):
+    """Pola oferty edytowalne z panelu administratora. Wszystkie pola są
+    opcjonalne (PATCH z częściową aktualizacją) - pozwala to poprawiać
+    pojedyncze błędy, np. źle rozpoznaną dzielnicę czy kwotę kaucji, bez
+    konieczności przesyłania całego rekordu."""
+
+    title: Optional[str] = Field(default=None, min_length=1)
+    city: Optional[str] = Field(default=None, min_length=1)
+    district: Optional[str] = None
+    price: Optional[float] = Field(default=None, ge=0)
+    negotiable: Optional[bool] = None
+    link: Optional[str] = None
+    description: Optional[str] = None
+    address: Optional[str] = None
+    additional_cost: Optional[float] = Field(default=None, ge=0)
+    has_additional_cost: Optional[bool] = None
+    deposit: Optional[float] = Field(default=None, ge=0)
+    has_deposit_cost: Optional[bool] = None
+    has_deposit: Optional[bool] = None
+    total_monthly_cost: Optional[float] = Field(default=None, ge=0)
+    photos: Optional[list[str]] = None
+
+    @field_validator("city")
+    @classmethod
+    def _normalize_offer_city(cls, value: Optional[str]) -> Optional[str]:
+        return value.strip().upper() if value else value
+
+    @field_validator("title")
+    @classmethod
+    def _strip_title(cls, value: Optional[str]) -> Optional[str]:
+        if value is None:
+            return value
+        value = value.strip()
+        if not value:
+            raise ValueError("Tytuł nie może być pusty.")
+        return value
+
+
+class OfferDeleteOut(BaseModel):
+    status: str
+    id: str

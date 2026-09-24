@@ -22,5 +22,8 @@ export const queryKeys = {
     ["analysis", "cost-distribution", metric, binSize, filters] as const,
   valueScore: (filters: OfferFilters) => ["analysis", "value", filters] as const,
   adminCities: () => ["admin", "cities"] as const,
+  adminOffers: (query: OffersQuery) => ["admin", "offers", query] as const,
+  adminOffer: (id: string) => ["admin", "offer", id] as const,
+  adminOfferDistricts: (city: string | undefined) => ["admin", "offer-districts", city] as const,
   publicCities: () => ["cities", "public"] as const,
 };

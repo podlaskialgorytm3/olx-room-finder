@@ -65,3 +65,24 @@ export interface OffersQuery extends OfferFilters {
   page?: number;
   limit?: number;
 }
+
+/** Partial update payload for PATCH /api/admin/offers/{id} - mirrors
+ * `backend/schemas/admin.py::OfferUpdateIn`. Every field is optional so the
+ * admin panel can send only the fields that were actually edited. */
+export interface OfferUpdate {
+  title?: string;
+  city?: string;
+  district?: string | null;
+  price?: number | null;
+  negotiable?: boolean | null;
+  link?: string | null;
+  description?: string | null;
+  address?: string | null;
+  additional_cost?: number | null;
+  has_additional_cost?: boolean | null;
+  deposit?: number | null;
+  has_deposit_cost?: boolean | null;
+  has_deposit?: boolean | null;
+  total_monthly_cost?: number | null;
+  photos?: string[];
+}

@@ -7,9 +7,14 @@ miasto oraz ręcznie wyzwolić synchronizację dla wybranego miasta.
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException
+from typing import Literal, Optional
 
-from backend.dependencies import require_admin
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy.orm import Session
+
+from backend.db.session import get_db
+from backend.dependencies import offer_filters_params, require_admin
+from backend.repositories.offer_repository import OfferFilters, OfferRepository
 from backend.schemas.admin import (
     CityConfigCreateIn,
     CityConfigOut,
@@ -17,11 +22,17 @@ from backend.schemas.admin import (
     CityDeleteOut,
     CitySyncCancelOut,
     CitySyncTriggerOut,
+    OfferAdminListOut,
+    OfferDeleteOut,
+    OfferUpdateIn,
 )
+from backend.schemas.offer import OfferDetailOut, Pagination
 from backend.schemas.sync import SyncRunOut
 from backend.services import sync_service
 
 router = APIRouter(prefix="/api/admin", tags=["admin"], dependencies=[Depends(require_admin)])
+
+OfferSortField = Literal["price", "total_monthly_cost", "additional_cost", "deposit", "created_at"]
 
 
 def _city_config_out(config: dict) -> CityConfigOut:
@@ -122,3 +133,64 @@ def cancel_city_sync(city: str) -> CitySyncCancelOut:
     if not cancelled:
         raise HTTPException(status_code=409, detail=f"Synchronizacja miasta {city} nie jest aktualnie uruchomiona.")
     return CitySyncCancelOut(status="cancelling", city=city)
+
+
+# --- Zarządzanie pokojami (CRUD na ofertach) --------------------------------
+
+
+@router.get("/offers", response_model=OfferAdminListOut)
+def list_offers_admin(
+    filters: OfferFilters = Depends(offer_filters_params),
+    sort: OfferSortField = Query("created_at"),
+    order: Literal["asc", "desc"] = Query("desc"),
+    page: int = Query(1, ge=1),
+    limit: int = Query(20, ge=1, le=200),
+    db: Session = Depends(get_db),
+) -> OfferAdminListOut:
+    repo = OfferRepository(db)
+    rows, total = repo.search(filters, sort=sort, order=order, page=page, limit=limit)
+    total_pages = (total + limit - 1) // limit if total else 0
+    return OfferAdminListOut(
+        data=rows,
+        pagination=Pagination(page=page, limit=limit, total=total, total_pages=total_pages),
+    )
+
+
+@router.get("/offers/districts", response_model=list[str])
+def list_offer_districts_admin(
+    city: Optional[str] = Query(None, description="Filtr po mieście (kod, np. WARSZAWA)"),
+    db: Session = Depends(get_db),
+) -> list[str]:
+    repo = OfferRepository(db)
+    return repo.distinct_districts(city.strip().upper() if city else None)
+
+
+@router.get("/offers/{offer_id}", response_model=OfferDetailOut)
+def get_offer_admin(offer_id: str, db: Session = Depends(get_db)) -> OfferDetailOut:
+    repo = OfferRepository(db)
+    row = repo.get_by_id(offer_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail=f"Oferta o id={offer_id} nie została znaleziona.")
+    return row
+
+
+@router.patch("/offers/{offer_id}", response_model=OfferDetailOut)
+def update_offer_admin(offer_id: str, payload: OfferUpdateIn, db: Session = Depends(get_db)) -> OfferDetailOut:
+    repo = OfferRepository(db)
+    if repo.get_by_id(offer_id) is None:
+        raise HTTPException(status_code=404, detail=f"Oferta o id={offer_id} nie została znaleziona.")
+
+    values = payload.model_dump(exclude_unset=True)
+    updated = repo.update(offer_id, values)
+    if updated is None:
+        raise HTTPException(status_code=404, detail=f"Oferta o id={offer_id} nie została znaleziona.")
+    return updated
+
+
+@router.delete("/offers/{offer_id}", response_model=OfferDeleteOut)
+def delete_offer_admin(offer_id: str, db: Session = Depends(get_db)) -> OfferDeleteOut:
+    repo = OfferRepository(db)
+    deleted = repo.delete(offer_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail=f"Oferta o id={offer_id} nie została znaleziona.")
+    return OfferDeleteOut(status="deleted", id=offer_id)

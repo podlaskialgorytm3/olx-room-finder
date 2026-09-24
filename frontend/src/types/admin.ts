@@ -1,6 +1,7 @@
 /** Types mirroring `backend/schemas/admin.py`. */
 
 import type { SyncRun } from "./sync";
+import type { OfferDetail, Pagination } from "./offer";
 
 export interface CityConfig {
   city: string;
@@ -42,4 +43,16 @@ export interface CitySyncCancel {
 export interface CityDelete {
   status: string;
   city: string;
+}
+
+/** Admin (authenticated) list of offers - identical shape to `OfferList` but
+ * kept separate to mirror `backend/schemas/admin.py::OfferAdminListOut`. */
+export interface OfferAdminList {
+  data: OfferDetail[];
+  pagination: Pagination;
+}
+
+export interface OfferDelete {
+  status: string;
+  id: string;
 }

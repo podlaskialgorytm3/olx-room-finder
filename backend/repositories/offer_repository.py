@@ -8,12 +8,18 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from typing import Any, Optional
 
 from sqlalchemy import Select, func, or_, select
+from sqlalchemy import delete as sa_delete
+from sqlalchemy import update as sa_update
 from sqlalchemy.orm import Session
 
 from backend.db.models import offers
+
+# Pola tri-state/bool zapisywane w bazie jako 0/1/NULL.
+_BOOL_COLUMNS = {"negotiable", "has_additional_cost", "has_deposit", "has_deposit_cost"}
 
 
 @dataclass
@@ -162,3 +168,33 @@ class OfferRepository:
         selected = [getattr(offers.c, col) for col in columns]
         stmt = _apply_filters(select(*selected), filters)
         return [dict(row._mapping) for row in self.db.execute(stmt).all()]
+
+    def update(self, offer_id: str, values: dict[str, Any]) -> Optional[dict[str, Any]]:
+        """Aktualizuje wybrane pola oferty (panel administratora - poprawianie
+        błędów LLM z pobierania danych). `values` to słownik pól gotowych do
+        zapisania (klucze pydantic == kolumny), z pominięciem nieustawionych."""
+        if not values:
+            return self.get_by_id(offer_id)
+
+        db_values: dict[str, Any] = {}
+        for key, value in values.items():
+            if key == "photos":
+                db_values[key] = json.dumps(value if value is not None else [])
+            elif key in _BOOL_COLUMNS:
+                db_values[key] = None if value is None else int(value)
+            else:
+                db_values[key] = value
+        db_values["updated_at"] = datetime.now(timezone.utc).isoformat()
+
+        stmt = sa_update(offers).where(offers.c.id == offer_id).values(**db_values)
+        result = self.db.execute(stmt)
+        self.db.commit()
+        if result.rowcount == 0:
+            return None
+        return self.get_by_id(offer_id)
+
+    def delete(self, offer_id: str) -> bool:
+        stmt = sa_delete(offers).where(offers.c.id == offer_id)
+        result = self.db.execute(stmt)
+        self.db.commit()
+        return result.rowcount > 0
