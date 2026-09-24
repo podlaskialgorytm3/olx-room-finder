@@ -28,6 +28,18 @@ export interface UserRegisterResult {
   message: string;
 }
 
+/** Logowanie zwykłego użytkownika serwisu (najemca/wynajmujący). */
+export interface UserLogin {
+  email: string;
+  password: string;
+}
+
+export interface UserLoginResult {
+  token: string;
+  expires_at: string;
+  user: User;
+}
+
 export interface UserPagination {
   page: number;
   limit: number;

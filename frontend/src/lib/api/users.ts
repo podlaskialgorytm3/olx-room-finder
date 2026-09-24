@@ -1,10 +1,13 @@
 import { apiFetch, buildQueryString } from "./client";
 import { authHeaders } from "./auth";
+import { getUserToken } from "@/lib/user-auth-store";
 import type {
   User,
   UserCreate,
   UserDelete,
   UserList,
+  UserLogin,
+  UserLoginResult,
   UserQuery,
   UserRegister,
   UserRegisterResult,
@@ -17,6 +20,31 @@ export function register(payload: UserRegister): Promise<UserRegisterResult> {
     method: "POST",
     body: JSON.stringify(payload),
   });
+}
+
+/** Logowanie zwykłego użytkownika serwisu (najemca/zatwierdzony wynajmujący). */
+export function login(payload: UserLogin): Promise<UserLoginResult> {
+  return apiFetch<UserLoginResult>("/api/users/login", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function logout(): Promise<void> {
+  return apiFetch<void>("/api/users/logout", {
+    method: "POST",
+    headers: userAuthHeaders(),
+  });
+}
+
+export function me(): Promise<User> {
+  return apiFetch<User>("/api/users/me", { headers: userAuthHeaders() });
+}
+
+/** Builds the `Authorization` header for the logged-in service user (not the admin panel). */
+export function userAuthHeaders(): Record<string, string> {
+  const token = getUserToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
 // --- Panel administratora - "Zarządzanie kontami" (pełny CRUD) -------------
