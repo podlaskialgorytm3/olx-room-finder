@@ -14,6 +14,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ErrorState } from "@/components/common/error-state";
 import { RoomsManagementPanel } from "@/components/admin/rooms-management-panel";
+import { AccountsManagementPanel } from "@/components/admin/accounts-management-panel";
 import { useAdminAuthHydrated, useAdminAuthStore } from "@/lib/admin-auth-store";
 import {
   useAdminLogout,
@@ -331,6 +332,7 @@ export default function AdminDashboardPage() {
         <TabsList>
           <TabsTrigger value="cities">Zarządzanie miastami</TabsTrigger>
           <TabsTrigger value="rooms">Zarządzanie pokojami</TabsTrigger>
+          <TabsTrigger value="accounts">Zarządzanie kontami</TabsTrigger>
         </TabsList>
 
         <TabsContent value="cities" className="space-y-8">
@@ -382,6 +384,10 @@ export default function AdminDashboardPage() {
 
         <TabsContent value="rooms">
           <RoomsManagementPanel />
+        </TabsContent>
+
+        <TabsContent value="accounts">
+          <AccountsManagementPanel />
         </TabsContent>
       </Tabs>
     </div>

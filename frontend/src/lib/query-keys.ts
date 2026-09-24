@@ -1,4 +1,4 @@
-import type { AnalysisMetric, OfferFilters, OffersQuery } from "@/types";
+import type { AnalysisMetric, OfferFilters, OffersQuery, UserQuery } from "@/types";
 
 /** Centralized query key factory so cache invalidation stays consistent. */
 export const queryKeys = {
@@ -26,4 +26,6 @@ export const queryKeys = {
   adminOffer: (id: string) => ["admin", "offer", id] as const,
   adminOfferDistricts: (city: string | undefined) => ["admin", "offer-districts", city] as const,
   publicCities: () => ["cities", "public"] as const,
+  adminUsers: (query: UserQuery) => ["admin", "users", query] as const,
+  adminUser: (id: number) => ["admin", "user", id] as const,
 };

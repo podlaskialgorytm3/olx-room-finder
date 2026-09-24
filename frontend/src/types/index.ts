@@ -5,3 +5,4 @@ export * from "./sync";
 export * from "./auth";
 export * from "./admin";
 export * from "./city";
+export * from "./user";

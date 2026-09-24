@@ -830,6 +830,25 @@ CREATE TABLE IF NOT EXISTS admin_sessions (
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     expires_at TEXT NOT NULL
 );
+
+-- Konta użytkowników serwisu (najemcy i wynajmujący). Najemcy są aktywni od
+-- razu po rejestracji, konta wynajmujących wymagają zatwierdzenia przez
+-- administratora (status 'pending' -> 'approved'/'rejected') - patrz
+-- `backend/services/user_service.py` i panel "Zarządzanie kontami".
+CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    email TEXT NOT NULL UNIQUE,
+    full_name TEXT NOT NULL,
+    phone TEXT,
+    password_hash TEXT NOT NULL,
+    salt TEXT NOT NULL,
+    role TEXT NOT NULL DEFAULT 'tenant',       -- 'tenant' | 'landlord'
+    status TEXT NOT NULL DEFAULT 'approved',   -- 'pending' | 'approved' | 'rejected'
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
+CREATE INDEX IF NOT EXISTS idx_users_status ON users(status);
 """
 
 OFFER_COLUMNS = [
