@@ -36,11 +36,11 @@ USER_COLUMNS = (
 
 
 class EmailAlreadyExistsError(Exception):
-    """Podniesione, gdy adres e-mail jest już zajęty przez inne konto."""
+    """Podniesione, gdy podany e-mail/login jest już zajęty przez inne konto."""
 
 
 class InvalidCredentialsError(Exception):
-    """Podniesione, gdy e-mail nie istnieje albo hasło jest nieprawidłowe."""
+    """Podniesione, gdy podany e-mail/login nie istnieje albo hasło jest nieprawidłowe."""
 
 
 class AccountNotApprovedError(Exception):
@@ -80,7 +80,7 @@ def register_user(email: str, password: str, full_name: str, phone: Optional[str
     with closing(get_connection()) as conn:
         existing = conn.execute("SELECT id FROM users WHERE email = ?", (email,)).fetchone()
         if existing is not None:
-            raise EmailAlreadyExistsError(f"Konto z adresem e-mail {email} już istnieje.")
+            raise EmailAlreadyExistsError(f"Konto z tym adresem e-mail/loginem ({email}) już istnieje.")
 
         cursor = conn.execute(
             """
@@ -154,7 +154,7 @@ def create_user(
     with closing(get_connection()) as conn:
         existing = conn.execute("SELECT id FROM users WHERE email = ?", (email,)).fetchone()
         if existing is not None:
-            raise EmailAlreadyExistsError(f"Konto z adresem e-mail {email} już istnieje.")
+            raise EmailAlreadyExistsError(f"Konto z tym adresem e-mail/loginem ({email}) już istnieje.")
 
         cursor = conn.execute(
             """
@@ -189,7 +189,7 @@ def update_user(
         with closing(get_connection()) as conn:
             clash = conn.execute("SELECT id FROM users WHERE email = ? AND id != ?", (email, user_id)).fetchone()
         if clash is not None:
-            raise EmailAlreadyExistsError(f"Konto z adresem e-mail {email} już istnieje.")
+            raise EmailAlreadyExistsError(f"Konto z tym adresem e-mail/loginem ({email}) już istnieje.")
         updates.append("email = ?")
         params.append(email)
     if full_name is not None:
@@ -234,9 +234,9 @@ def delete_user(user_id: int) -> bool:
 
 
 def verify_credentials(email: str, password: str) -> dict:
-    """Sprawdza e-mail/hasło i zwraca dane konta.
+    """Sprawdza e-mail (lub login) i hasło, zwraca dane konta.
 
-    Podnosi `InvalidCredentialsError` gdy e-mail nie istnieje lub hasło jest
+    Podnosi `InvalidCredentialsError` gdy e-mail/login nie istnieje lub hasło jest
     złe, a `AccountNotApprovedError` gdy konto istnieje i hasło jest
     poprawne, ale status to `pending`/`rejected` (konto wynajmującego
     czekające na/odrzucone przy zatwierdzeniu)."""
@@ -248,12 +248,12 @@ def verify_credentials(email: str, password: str) -> dict:
         ).fetchone()
 
     if row is None:
-        raise InvalidCredentialsError("Nieprawidłowy e-mail lub hasło.")
+        raise InvalidCredentialsError("Nieprawidłowy e-mail/login lub hasło.")
 
     *user_values, password_hash, salt_hex = row
     candidate_hash = _hash_password(password, bytes.fromhex(salt_hex))
     if not secrets.compare_digest(password_hash, candidate_hash):
-        raise InvalidCredentialsError("Nieprawidłowy e-mail lub hasło.")
+        raise InvalidCredentialsError("Nieprawidłowy e-mail/login lub hasło.")
 
     user = _row_to_dict(user_values)
     if user["status"] != "approved":

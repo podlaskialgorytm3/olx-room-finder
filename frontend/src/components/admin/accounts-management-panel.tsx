@@ -92,8 +92,8 @@ function CreateUserDialog({ open, onOpenChange }: { open: boolean; onOpenChange:
             <Input id="new-user-name" value={fullName} onChange={(e) => setFullName(e.target.value)} required />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="new-user-email">E-mail</Label>
-            <Input id="new-user-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+            <Label htmlFor="new-user-email">E-mail lub login</Label>
+            <Input id="new-user-email" type="text" value={email} onChange={(e) => setEmail(e.target.value)} required />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="new-user-phone">Telefon</Label>
@@ -208,8 +208,8 @@ function EditUserForm({ user, onSaved }: { user: User; onSaved: () => void }) {
           <Input id="edit-user-name" value={fullName} onChange={(e) => setFullName(e.target.value)} required />
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="edit-user-email">E-mail</Label>
-          <Input id="edit-user-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+          <Label htmlFor="edit-user-email">E-mail lub login</Label>
+          <Input id="edit-user-email" type="text" value={email} onChange={(e) => setEmail(e.target.value)} required />
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="edit-user-phone">Telefon</Label>
@@ -357,7 +357,7 @@ export function AccountsManagementPanel() {
             <Label htmlFor="users-search">Szukaj</Label>
             <Input
               id="users-search"
-              placeholder="E-mail, imię i nazwisko…"
+              placeholder="E-mail, login, imię i nazwisko…"
               value={search}
               onChange={(e) => resetPageAnd(() => setSearch(e.target.value))}
             />
@@ -388,7 +388,7 @@ export function AccountsManagementPanel() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Imię i nazwisko</TableHead>
-                    <TableHead>E-mail</TableHead>
+                    <TableHead>E-mail / login</TableHead>
                     <TableHead>Telefon</TableHead>
                     <TableHead>Typ konta</TableHead>
                     <TableHead>Status</TableHead>

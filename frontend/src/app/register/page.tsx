@@ -47,7 +47,7 @@ export default function RegisterPage() {
         },
         onError: (err) => {
           if (err instanceof ApiError && err.status === 409) {
-            toast.error("Konto z tym adresem e-mail już istnieje.");
+            toast.error("Konto z tym adresem e-mail/loginem już istnieje.");
           } else {
             toast.error(err instanceof ApiError ? err.message : "Nie udało się utworzyć konta.");
           }
@@ -122,11 +122,11 @@ export default function RegisterPage() {
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="email">Adres e-mail</Label>
+              <Label htmlFor="email">E-mail lub login</Label>
               <Input
                 id="email"
-                type="email"
-                autoComplete="email"
+                type="text"
+                autoComplete="username"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
