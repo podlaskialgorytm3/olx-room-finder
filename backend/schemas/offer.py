@@ -23,6 +23,7 @@ class OfferOut(BaseModel):
     has_deposit: Optional[bool] = None
     total_monthly_cost: Optional[float] = None
     photos: list[str] = []
+    views_count: int = 0
 
 
 class OfferDetailOut(OfferOut):

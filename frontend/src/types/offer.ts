@@ -21,6 +21,7 @@ export interface Offer {
   has_deposit: boolean | null;
   total_monthly_cost: number | null;
   photos: string[];
+  views_count: number;
 }
 
 export interface OfferDetail extends Offer {

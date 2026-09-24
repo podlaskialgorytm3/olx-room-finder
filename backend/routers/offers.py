@@ -41,4 +41,8 @@ def get_offer(offer_id: str, db: Session = Depends(get_db)) -> OfferDetailOut:
     row = repo.get_by_id(offer_id)
     if row is None:
         raise HTTPException(status_code=404, detail=f"Oferta o id={offer_id} nie została znaleziona.")
+    # Wejście na stronę szczegółów pokoju liczy się jako jedno wyświetlenie -
+    # widoczne później w panelu administratora (zarządzanie pokojami).
+    repo.increment_views(offer_id)
+    row["views_count"] = row.get("views_count", 0) + 1
     return row

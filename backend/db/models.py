@@ -41,6 +41,7 @@ offers = Table(
     Column("has_deposit", Integer),  # 0/1/NULL
     Column("total_monthly_cost", Float),
     Column("photos", Text),  # JSON zserializowany jako string
+    Column("views_count", Integer, nullable=False, default=0),  # licznik wyświetleń szczegółów oferty
     Column("created_at", String),
     Column("updated_at", String),
 )

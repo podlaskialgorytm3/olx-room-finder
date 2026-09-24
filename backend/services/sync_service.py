@@ -770,6 +770,7 @@ CREATE TABLE IF NOT EXISTS offers (
     has_deposit INTEGER,
     total_monthly_cost REAL,
     photos TEXT,
+    views_count INTEGER NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -898,10 +899,18 @@ def init_db() -> None:
         _migrate_add_city_column(conn)
         _migrate_add_city_to_sync_runs(conn)
         _migrate_add_link_to_city_configs(conn)
+        _migrate_add_views_count_to_offers(conn)
         conn.execute("CREATE INDEX IF NOT EXISTS idx_sync_runs_city ON sync_runs(city)")
         conn.commit()
     migrate_legacy_csv_if_needed()
     ensure_city_configs()
+
+
+def _migrate_add_views_count_to_offers(conn: sqlite3.Connection) -> None:
+    """Migracja dla baz utworzonych przed dodaniem licznika wyświetleń do `offers`."""
+    existing_columns = {row[1] for row in conn.execute("PRAGMA table_info(offers)").fetchall()}
+    if "views_count" not in existing_columns:
+        conn.execute("ALTER TABLE offers ADD COLUMN views_count INTEGER NOT NULL DEFAULT 0")
 
 
 def _migrate_add_city_to_sync_runs(conn: sqlite3.Connection) -> None:

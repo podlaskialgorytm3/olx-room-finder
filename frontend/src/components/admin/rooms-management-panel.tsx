@@ -167,6 +167,7 @@ export function RoomsManagementPanel() {
                     <TableHead>Cena</TableHead>
                     <TableHead>Koszt całkowity</TableHead>
                     <TableHead>Negocjacja</TableHead>
+                    <TableHead className="text-right">Wyświetlenia</TableHead>
                     <TableHead className="text-right">Akcje</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -195,6 +196,7 @@ export function RoomsManagementPanel() {
                           {formatTriState(offer.negotiable, "Tak", "Nie", "Brak danych")}
                         </Badge>
                       </TableCell>
+                      <TableCell className="text-right tabular-nums">{offer.views_count}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1.5">
                           <Button size="sm" variant="outline" asChild>
@@ -222,7 +224,7 @@ export function RoomsManagementPanel() {
                   ))}
                   {offers.data.data.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center text-muted-foreground">
+                      <TableCell colSpan={8} className="text-center text-muted-foreground">
                         Brak ofert spełniających wybrane filtry.
                       </TableCell>
                     </TableRow>

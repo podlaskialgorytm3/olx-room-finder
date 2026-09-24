@@ -198,3 +198,15 @@ class OfferRepository:
         result = self.db.execute(stmt)
         self.db.commit()
         return result.rowcount > 0
+
+    def increment_views(self, offer_id: str) -> None:
+        """Nabija jedno wyświetlenie oferty - wywoływane, gdy użytkownik
+        otwiera stronę szczegółów danego pokoju. Wynik widoczny jest w
+        panelu administratora (zarządzanie pokojami)."""
+        stmt = (
+            sa_update(offers)
+            .where(offers.c.id == offer_id)
+            .values(views_count=offers.c.views_count + 1)
+        )
+        self.db.execute(stmt)
+        self.db.commit()
