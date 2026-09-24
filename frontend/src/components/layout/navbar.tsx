@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { LayoutDashboard, UserCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAdminAuthHydrated, useAdminAuthStore } from "@/lib/admin-auth-store";
 
 const NAV_LINKS = [
   { href: "/", label: "Szukaj" },
@@ -12,6 +14,10 @@ const NAV_LINKS = [
 
 export function Navbar() {
   const pathname = usePathname();
+  const hydrated = useAdminAuthHydrated();
+  const token = useAdminAuthStore((state) => state.token);
+  const username = useAdminAuthStore((state) => state.username);
+  const isLoggedIn = hydrated && !!token;
 
   return (
     <header className="sticky top-0 z-40 border-b border-border/80 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/75">
@@ -39,18 +45,33 @@ export function Navbar() {
         </nav>
 
         <div className="hidden items-center gap-3 md:flex">
-          <Link
-            href="/register"
-            className="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-          >
-            Rejestracja
-          </Link>
-          <Link
-            href="/admin"
-            className="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-          >
-            Logowanie
-          </Link>
+          {isLoggedIn ? (
+            <Link
+              href="/admin"
+              className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+            >
+              <UserCircle className="size-4" />
+              <span>{username}</span>
+              <span className="mx-1 text-border">|</span>
+              <LayoutDashboard className="size-4" />
+              <span>Panel</span>
+            </Link>
+          ) : (
+            <>
+              <Link
+                href="/register"
+                className="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+              >
+                Rejestracja
+              </Link>
+              <Link
+                href="/admin"
+                className="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+              >
+                Logowanie
+              </Link>
+            </>
+          )}
         </div>
       </div>
     </header>
