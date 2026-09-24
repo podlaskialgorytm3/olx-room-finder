@@ -1,10 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { LayoutDashboard, UserCircle } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { LayoutDashboard, LogOut, UserCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useAdminAuthHydrated, useAdminAuthStore } from "@/lib/admin-auth-store";
+import { useUserAuthHydrated, useUserAuthStore } from "@/lib/user-auth-store";
+import { useUserLogout } from "@/hooks";
 
 const NAV_LINKS = [
   { href: "/", label: "Szukaj" },
@@ -12,12 +16,35 @@ const NAV_LINKS = [
   { href: "/analysis", label: "Analiza" },
 ];
 
+const ROLE_LABELS: Record<string, string> = {
+  tenant: "Najemca",
+  landlord: "Wynajmujący",
+};
+
 export function Navbar() {
   const pathname = usePathname();
-  const hydrated = useAdminAuthHydrated();
-  const token = useAdminAuthStore((state) => state.token);
-  const username = useAdminAuthStore((state) => state.username);
-  const isLoggedIn = hydrated && !!token;
+  const router = useRouter();
+
+  const adminHydrated = useAdminAuthHydrated();
+  const adminToken = useAdminAuthStore((state) => state.token);
+  const adminUsername = useAdminAuthStore((state) => state.username);
+  const isAdminLoggedIn = adminHydrated && !!adminToken;
+
+  const userHydrated = useUserAuthHydrated();
+  const user = useUserAuthStore((state) => state.user);
+  const userToken = useUserAuthStore((state) => state.token);
+  const isUserLoggedIn = userHydrated && !!userToken && !!user;
+
+  const userLogout = useUserLogout();
+
+  const handleUserLogout = () => {
+    userLogout.mutate(undefined, {
+      onSuccess: () => {
+        toast.success("Wylogowano.");
+        router.push("/");
+      },
+    });
+  };
 
   return (
     <header className="sticky top-0 z-40 border-b border-border/80 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/75">
@@ -45,17 +72,29 @@ export function Navbar() {
         </nav>
 
         <div className="hidden items-center gap-3 md:flex">
-          {isLoggedIn ? (
+          {isAdminLoggedIn ? (
             <Link
               href="/admin"
               className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
             >
               <UserCircle className="size-4" />
-              <span>{username}</span>
+              <span>{adminUsername}</span>
               <span className="mx-1 text-border">|</span>
               <LayoutDashboard className="size-4" />
               <span>Panel</span>
             </Link>
+          ) : isUserLoggedIn ? (
+            <div className="flex items-center gap-2">
+              <span className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground">
+                <UserCircle className="size-4" />
+                <span>{user!.full_name}</span>
+                <span className="text-xs text-muted-foreground">({ROLE_LABELS[user!.role] ?? user!.role})</span>
+              </span>
+              <Button variant="outline" size="sm" onClick={handleUserLogout} disabled={userLogout.isPending}>
+                <LogOut className="size-3.5" />
+                Wyloguj
+              </Button>
+            </div>
           ) : (
             <>
               <Link
@@ -65,7 +104,7 @@ export function Navbar() {
                 Rejestracja
               </Link>
               <Link
-                href="/admin"
+                href="/login"
                 className="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
               >
                 Logowanie
