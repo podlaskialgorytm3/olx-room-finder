@@ -178,10 +178,10 @@ export function RoomsManagementPanel() {
                           href={`/offers/${encodeURIComponent(offer.id)}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 truncate font-medium text-foreground hover:text-primary hover:underline"
-                          title="Zobacz stronę pokoju (podgląd zmian)"
+                          className="inline-flex items-center gap-1 font-medium text-foreground hover:text-primary hover:underline"
+                          title={offer.title}
                         >
-                          <span className="truncate">{offer.title}</span>
+                          <span>{truncateText(offer.title, 120)}</span>
                           <ExternalLink className="size-3.5 shrink-0 text-muted-foreground" />
                         </Link>
                         <p className="truncate text-xs text-muted-foreground">{offer.address ?? "brak adresu"}</p>

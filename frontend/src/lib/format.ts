@@ -45,3 +45,11 @@ export function formatCity(city: string | null | undefined): string {
   if (!city) return "brak danych";
   return city.charAt(0).toUpperCase() + city.slice(1).toLowerCase();
 }
+
+/** Ucina tekst po `maxLength` znakach, dodając "…" - używane np. dla
+ * długich tytułów ofert w tabelach panelu administratora, żeby nie
+ * rozciągały wiersza niezależnie od szerokości kolumny. */
+export function truncateText(value: string | null | undefined, maxLength = 120): string {
+  if (!value) return "";
+  return value.length > maxLength ? `${value.slice(0, maxLength).trimEnd()}…` : value;
+}
