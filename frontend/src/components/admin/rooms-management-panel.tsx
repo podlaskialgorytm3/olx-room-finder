@@ -16,7 +16,7 @@ import { ErrorState } from "@/components/common/error-state";
 import { PaginationControls } from "@/components/offers/pagination-controls";
 import { OfferEditDialog } from "@/components/admin/offer-edit-dialog";
 import { useAdminOfferDistricts, useAdminOffers, useCityConfigs, useDeleteOffer } from "@/hooks";
-import { formatCity, formatPln, formatTriState } from "@/lib/format";
+import { formatCity, formatPln, formatTriState, truncateText } from "@/lib/format";
 import { ApiError } from "@/lib/api";
 import type { OfferDetail, OffersQuery } from "@/types";
 
