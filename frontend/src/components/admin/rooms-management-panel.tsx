@@ -1,8 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { toast } from "sonner";
-import { Pencil, Trash2 } from "lucide-react";
+import { ExternalLink, Pencil, Trash2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -173,7 +174,16 @@ export function RoomsManagementPanel() {
                   {offers.data.data.map((offer) => (
                     <TableRow key={offer.id}>
                       <TableCell className="max-w-[20rem]">
-                        <p className="truncate font-medium">{offer.title}</p>
+                        <Link
+                          href={`/offers/${encodeURIComponent(offer.id)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 truncate font-medium text-foreground hover:text-primary hover:underline"
+                          title="Zobacz stronę pokoju (podgląd zmian)"
+                        >
+                          <span className="truncate">{offer.title}</span>
+                          <ExternalLink className="size-3.5 shrink-0 text-muted-foreground" />
+                        </Link>
                         <p className="truncate text-xs text-muted-foreground">{offer.address ?? "brak adresu"}</p>
                       </TableCell>
                       <TableCell>{formatCity(offer.city)}</TableCell>
@@ -187,6 +197,12 @@ export function RoomsManagementPanel() {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1.5">
+                          <Button size="sm" variant="outline" asChild>
+                            <Link href={`/offers/${encodeURIComponent(offer.id)}`} target="_blank" rel="noopener noreferrer">
+                              <ExternalLink className="size-3.5" />
+                              Podgląd
+                            </Link>
+                          </Button>
                           <Button size="sm" variant="outline" onClick={() => setEditingOffer(offer)}>
                             <Pencil className="size-3.5" />
                             Edytuj
