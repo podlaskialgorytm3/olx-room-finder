@@ -159,7 +159,7 @@ export function WarsawMap({ selectedDistrict, onSelectDistrict }: WarsawMapProps
       </div>
 
       {statsLoading && (
-        <div className="absolute right-3 top-3 z-[1000] rounded-md bg-background/90 px-2 py-1 text-xs text-muted-foreground shadow">
+        <div className="absolute bottom-3 right-3 z-[1000] rounded-md bg-background/90 px-2 py-1 text-xs text-muted-foreground shadow">
           Ładowanie statystyk…
         </div>
       )}
