@@ -149,7 +149,7 @@ export function WarsawMap({ selectedDistrict, onSelectDistrict }: WarsawMapProps
         <GeoJSON key={metric} data={geoData} style={styleFeature} onEachFeature={onEachFeature} />
       </MapContainer>
 
-      <div className="pointer-events-none absolute inset-3 flex flex-col justify-between">
+      <div className="pointer-events-none absolute inset-3 z-[1000] flex flex-col justify-between">
         <div className="pointer-events-auto self-start">
           <MapMetricToggle value={metric} onChange={setMetric} />
         </div>
@@ -159,7 +159,7 @@ export function WarsawMap({ selectedDistrict, onSelectDistrict }: WarsawMapProps
       </div>
 
       {statsLoading && (
-        <div className="absolute right-3 top-3 rounded-md bg-background/90 px-2 py-1 text-xs text-muted-foreground shadow">
+        <div className="absolute right-3 top-3 z-[1000] rounded-md bg-background/90 px-2 py-1 text-xs text-muted-foreground shadow">
           Ładowanie statystyk…
         </div>
       )}
