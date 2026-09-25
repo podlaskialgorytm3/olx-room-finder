@@ -25,6 +25,10 @@ def list_offers(
     limit: int = Query(DEFAULT_PAGE_SIZE, ge=1, le=MAX_PAGE_SIZE),
     db: Session = Depends(get_db),
 ) -> OfferListOut:
+    # Publiczna lista pokazuje wyłącznie zatwierdzone ogłoszenia - oferty
+    # wynajmujących oczekujące na moderację (lub odrzucone) nigdy nie
+    # przechodzą przez ten endpoint, niezależnie od przekazanych filtrów.
+    filters.status = "approved"
     repo = OfferRepository(db)
     rows, total = repo.search(filters, sort=sort, order=order, page=page, limit=limit)
     total_pages = (total + limit - 1) // limit if total else 0
@@ -39,7 +43,7 @@ def list_offers(
 def get_offer(offer_id: str, db: Session = Depends(get_db)) -> OfferDetailOut:
     repo = OfferRepository(db)
     row = repo.get_by_id(offer_id)
-    if row is None:
+    if row is None or row.get("status") != "approved":
         raise HTTPException(status_code=404, detail=f"Oferta o id={offer_id} nie została znaleziona.")
     # Wejście na stronę szczegółów pokoju liczy się jako jedno wyświetlenie -
     # widoczne później w panelu administratora (zarządzanie pokojami).

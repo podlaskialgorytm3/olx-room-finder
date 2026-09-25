@@ -141,12 +141,14 @@ def cancel_city_sync(city: str) -> CitySyncCancelOut:
 @router.get("/offers", response_model=OfferAdminListOut)
 def list_offers_admin(
     filters: OfferFilters = Depends(offer_filters_params),
+    status_: Optional[Literal["pending", "approved", "rejected"]] = Query(None, alias="status"),
     sort: OfferSortField = Query("created_at"),
     order: Literal["asc", "desc"] = Query("desc"),
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=200),
     db: Session = Depends(get_db),
 ) -> OfferAdminListOut:
+    filters.status = status_
     repo = OfferRepository(db)
     rows, total = repo.search(filters, sort=sort, order=order, page=page, limit=limit)
     total_pages = (total + limit - 1) // limit if total else 0

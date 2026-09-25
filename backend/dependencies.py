@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import Optional
 
-from fastapi import Header, HTTPException, Query, status
+from fastapi import Depends, Header, HTTPException, Query, status
 
 from backend.repositories.offer_repository import OfferFilters
 from backend.services import auth_service, user_service
@@ -69,4 +69,17 @@ def require_user(authorization: Optional[str] = Header(default=None)) -> dict:
     user = user_service.validate_token(token)
     if user is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Nieprawidłowy lub wygasły token.")
+    return user
+
+
+def require_landlord(user: dict = Depends(require_user)) -> dict:
+    """Dependency chroniąca endpointy panelu wynajmującego (`/api/landlord/*`)
+    - wymaga zalogowanego konta (patrz `require_user`) z rolą `landlord`.
+    Konto musi już być zatwierdzone (`status='approved'`), bo tylko takie
+    konta mogą się w ogóle zalogować - patrz `user_service.verify_credentials`."""
+    if user["role"] != "landlord":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Ta sekcja jest dostępna tylko dla kont wynajmującego.",
+        )
     return user
