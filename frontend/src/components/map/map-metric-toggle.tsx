@@ -27,8 +27,9 @@ export function MapMetricToggle({ value, onChange }: MapMetricToggleProps) {
 
   return (
     <fieldset className="flex flex-col gap-1.5 rounded-lg border border-border bg-card p-3 text-sm shadow-sm">
-      <legend className="flex w-full items-center justify-between gap-2 px-1 text-xs font-medium text-muted-foreground">
-        Mapa pokazuje:
+      <legend className="sr-only">Mapa pokazuje</legend>
+      <div className="flex w-full items-center justify-between gap-2 px-1">
+        <span className="text-xs font-medium text-muted-foreground">Mapa pokazuje:</span>
         <button
           type="button"
           onClick={() => setCollapsed(true)}
@@ -37,7 +38,7 @@ export function MapMetricToggle({ value, onChange }: MapMetricToggleProps) {
         >
           <Minus className="size-3.5" />
         </button>
-      </legend>
+      </div>
       {(Object.keys(MAP_METRIC_LABELS) as MapMetric[]).map((metric) => (
         <label
           key={metric}
@@ -53,7 +54,7 @@ export function MapMetricToggle({ value, onChange }: MapMetricToggleProps) {
             checked={value === metric}
             onChange={() => onChange(metric)}
           />
-          {MAP_METRIC_LABELS[metric]}
+          <span className="whitespace-nowrap">{MAP_METRIC_LABELS[metric]}</span>
         </label>
       ))}
     </fieldset>
