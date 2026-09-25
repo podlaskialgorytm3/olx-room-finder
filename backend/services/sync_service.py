@@ -772,9 +772,15 @@ CREATE TABLE IF NOT EXISTS offers (
     photos TEXT,
     views_count INTEGER NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+    status TEXT NOT NULL DEFAULT 'approved',   -- 'pending' | 'approved' | 'rejected'
+    source TEXT NOT NULL DEFAULT 'olx',        -- 'olx' | 'landlord'
+    owner_user_id INTEGER,                     -- id z `users`, tylko dla source='landlord'
+    rejection_reason TEXT                      -- powód odrzucenia przez administratora
 );
 CREATE INDEX IF NOT EXISTS idx_offers_district ON offers(district);
+CREATE INDEX IF NOT EXISTS idx_offers_status ON offers(status);
+CREATE INDEX IF NOT EXISTS idx_offers_owner_user_id ON offers(owner_user_id);
 
 -- Historia zdarzeń pojedynczych ofert (utworzenie / usunięcie / w przyszłości
 -- zmiana ceny). Rekordy nigdy nie są modyfikowane ani kasowane, więc pozwala
@@ -900,6 +906,7 @@ def init_db() -> None:
         _migrate_add_city_to_sync_runs(conn)
         _migrate_add_link_to_city_configs(conn)
         _migrate_add_views_count_to_offers(conn)
+        _migrate_add_landlord_columns_to_offers(conn)
         conn.execute("CREATE INDEX IF NOT EXISTS idx_sync_runs_city ON sync_runs(city)")
         conn.commit()
     migrate_legacy_csv_if_needed()
