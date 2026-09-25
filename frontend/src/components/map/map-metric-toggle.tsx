@@ -17,7 +17,6 @@ export function MapMetricToggle({ value, onChange }: MapMetricToggleProps) {
         type="button"
         onClick={() => setCollapsed(false)}
         aria-label="Rozwiń wybór metryki mapy"
-        title="Rozwiń wybór metryki mapy"
         className="flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-sm transition-colors hover:bg-accent"
       >
         <Plus className="size-3.5" />
@@ -34,10 +33,9 @@ export function MapMetricToggle({ value, onChange }: MapMetricToggleProps) {
           type="button"
           onClick={() => setCollapsed(true)}
           aria-label="Zwiń wybór metryki mapy"
-          title="Zwiń wybór metryki mapy"
-          className="flex size-4 items-center justify-center rounded-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+          className="flex size-5 shrink-0 items-center justify-center rounded-md border border-border bg-muted text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
         >
-          <Minus className="size-3" />
+          <Minus className="size-3.5" />
         </button>
       </legend>
       {(Object.keys(MAP_METRIC_LABELS) as MapMetric[]).map((metric) => (
