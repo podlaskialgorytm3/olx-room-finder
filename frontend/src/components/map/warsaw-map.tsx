@@ -150,7 +150,7 @@ export function WarsawMap({ selectedDistrict, onSelectDistrict }: WarsawMapProps
       </MapContainer>
 
       <div className="pointer-events-none absolute inset-3 z-[1000] flex flex-col justify-between">
-        <div className="pointer-events-auto self-start">
+        <div className="pointer-events-auto self-end">
           <MapMetricToggle value={metric} onChange={setMetric} />
         </div>
         <div className="pointer-events-auto self-start">
