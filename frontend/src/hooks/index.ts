@@ -7,3 +7,4 @@ export * from "./useAdminOffers";
 export * from "./useCities";
 export * from "./useUsers";
 export * from "./useAdminUsers";
+export * from "./useLandlordOffers";
