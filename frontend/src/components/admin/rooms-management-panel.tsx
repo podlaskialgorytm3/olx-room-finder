@@ -23,12 +23,6 @@ import type { OfferDetail, OffersQuery, SortField } from "@/types";
 
 const ALL = "all" as const;
 
-const SORTABLE_FIELDS: { field: SortField; label: string }[] = [
-  { field: "price", label: "Cena" },
-  { field: "total_monthly_cost", label: "Koszt całkowity" },
-  { field: "views_count", label: "Wyświetlenia" },
-];
-
 export function RoomsManagementPanel() {
   const [city, setCity] = useState<string | undefined>(undefined);
   const [district, setDistrict] = useState<string | undefined>(undefined);
@@ -85,6 +79,27 @@ export function RoomsManagementPanel() {
       onError: (err) => toast.error(err instanceof ApiError ? err.message : "Nie udało się usunąć oferty."),
     });
   };
+
+  const renderSortIcon = (field: SortField) => {
+    if (sort !== field) return <ArrowUpDown className="size-3.5 text-muted-foreground/50" />;
+    return order === "asc" ? <ArrowUp className="size-3.5" /> : <ArrowDown className="size-3.5" />;
+  };
+
+  const renderSortableHead = (field: SortField, label: string, className?: string) => (
+    <TableHead className={className}>
+      <button
+        type="button"
+        onClick={() => handleSort(field)}
+        className={cn(
+          "inline-flex items-center gap-1 hover:text-foreground",
+          sort === field && "font-semibold text-foreground",
+        )}
+      >
+        {label}
+        {renderSortIcon(field)}
+      </button>
+    </TableHead>
+  );
 
   return (
     <div className="space-y-6">
@@ -183,10 +198,10 @@ export function RoomsManagementPanel() {
                     <TableHead>Tytuł</TableHead>
                     <TableHead>Miasto</TableHead>
                     <TableHead>Dzielnica</TableHead>
-                    <TableHead>Cena</TableHead>
-                    <TableHead>Koszt całkowity</TableHead>
+                    {renderSortableHead("price", "Cena")}
+                    {renderSortableHead("total_monthly_cost", "Koszt całkowity")}
                     <TableHead>Negocjacja</TableHead>
-                    <TableHead className="text-right">Wyświetlenia</TableHead>
+                    {renderSortableHead("views_count", "Wyświetlenia", "text-right")}
                     <TableHead className="text-right">Akcje</TableHead>
                   </TableRow>
                 </TableHeader>
