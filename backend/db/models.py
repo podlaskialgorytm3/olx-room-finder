@@ -44,6 +44,10 @@ offers = Table(
     Column("views_count", Integer, nullable=False, default=0),  # licznik wyświetleń szczegółów oferty
     Column("created_at", String),
     Column("updated_at", String),
+    Column("status", String, nullable=False, default="approved"),  # 'pending' | 'approved' | 'rejected'
+    Column("source", String, nullable=False, default="olx"),  # 'olx' | 'landlord'
+    Column("owner_user_id", Integer),  # id z tabeli `users`, tylko dla source='landlord'
+    Column("rejection_reason", Text),  # powód odrzucenia przez administratora (source='landlord')
 )
 
 offer_history = Table(
