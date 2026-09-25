@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from typing import Optional
+from typing import Literal, Optional
 
 from pydantic import BaseModel, Field, field_validator
 
-from backend.schemas.offer import OfferDetailOut, Pagination
+from backend.schemas.offer import OfferDetailOut, OfferStatus, Pagination
 from backend.schemas.sync import SyncRunOut
 
 CITY_CODE_PATTERN = r"^[A-Za-z0-9_]{2,50}$"
@@ -94,6 +94,10 @@ class OfferUpdateIn(BaseModel):
     has_deposit: Optional[bool] = None
     total_monthly_cost: Optional[float] = Field(default=None, ge=0)
     photos: Optional[list[str]] = None
+    status: Optional[OfferStatus] = Field(
+        default=None, description="Zatwierdzenie/odrzucenie ogłoszenia wynajmującego (pending/approved/rejected)."
+    )
+    rejection_reason: Optional[str] = Field(default=None, description="Powód odrzucenia (widoczny dla wynajmującego).")
 
     @field_validator("city")
     @classmethod

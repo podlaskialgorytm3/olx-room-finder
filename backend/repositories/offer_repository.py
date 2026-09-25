@@ -178,6 +178,31 @@ class OfferRepository:
         stmt = _apply_filters(select(*selected), filters)
         return [dict(row._mapping) for row in self.db.execute(stmt).all()]
 
+    def create(self, values: dict[str, Any]) -> dict[str, Any]:
+        """Tworzy nowe ogłoszenie (panel wynajmującego - `POST
+        /api/landlord/offers`). Generuje unikalne id (prefiks `landlord-`, żeby
+        nigdy nie kolidowało z id ofert zsynchronizowanych z OLX)."""
+        offer_id = f"landlord-{uuid.uuid4().hex}"
+
+        db_values: dict[str, Any] = {}
+        for key, value in values.items():
+            if key == "photos":
+                db_values[key] = json.dumps(value if value is not None else [])
+            elif key in _BOOL_COLUMNS:
+                db_values[key] = None if value is None else int(value)
+            else:
+                db_values[key] = value
+
+        now = datetime.now(timezone.utc).isoformat()
+        db_values.setdefault("views_count", 0)
+        db_values["created_at"] = now
+        db_values["updated_at"] = now
+
+        stmt = sa_insert(offers).values(id=offer_id, **db_values)
+        self.db.execute(stmt)
+        self.db.commit()
+        return self.get_by_id(offer_id)  # type: ignore[return-value]
+
     def update(self, offer_id: str, values: dict[str, Any]) -> Optional[dict[str, Any]]:
         """Aktualizuje wybrane pola oferty (panel administratora - poprawianie
         błędów LLM z pobierania danych). `values` to słownik pól gotowych do

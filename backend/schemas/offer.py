@@ -1,8 +1,11 @@
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict
+
+OfferStatus = Literal["pending", "approved", "rejected"]
+OfferSource = Literal["olx", "landlord"]
 
 
 class OfferOut(BaseModel):
@@ -24,12 +27,16 @@ class OfferOut(BaseModel):
     total_monthly_cost: Optional[float] = None
     photos: list[str] = []
     views_count: int = 0
+    status: OfferStatus = "approved"
+    source: OfferSource = "olx"
 
 
 class OfferDetailOut(OfferOut):
     description: Optional[str] = None
     created_at: Optional[str] = None
     updated_at: Optional[str] = None
+    owner_user_id: Optional[int] = None
+    rejection_reason: Optional[str] = None
 
 
 class Pagination(BaseModel):
