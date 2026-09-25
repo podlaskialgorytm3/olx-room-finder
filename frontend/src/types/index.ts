@@ -6,3 +6,4 @@ export * from "./auth";
 export * from "./admin";
 export * from "./city";
 export * from "./user";
+export * from "./landlord";

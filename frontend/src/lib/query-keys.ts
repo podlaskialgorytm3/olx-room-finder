@@ -28,4 +28,6 @@ export const queryKeys = {
   publicCities: () => ["cities", "public"] as const,
   adminUsers: (query: UserQuery) => ["admin", "users", query] as const,
   adminUser: (id: number) => ["admin", "user", id] as const,
+  landlordOffers: (page: number, limit: number) => ["landlord", "offers", page, limit] as const,
+  landlordOffer: (id: string) => ["landlord", "offer", id] as const,
 };

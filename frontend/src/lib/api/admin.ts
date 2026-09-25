@@ -61,6 +61,7 @@ export function cancelCitySync(city: string): Promise<CitySyncCancel> {
 export function getAdminOffers(query: OffersQuery = {}): Promise<OfferAdminList> {
   const qs = buildQueryString({
     ...filtersToQuery(query),
+    status: query.status,
     sort: query.sort,
     order: query.order,
     page: query.page,

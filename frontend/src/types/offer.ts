@@ -5,6 +5,9 @@
  * `negotiable` are tri-state (`true | false | null`). `null` means "unknown",
  * NOT "false". Never coerce `null` to `false` in the UI.
  */
+export type OfferStatus = "pending" | "approved" | "rejected";
+export type OfferSource = "olx" | "landlord";
+
 export interface Offer {
   id: string;
   title: string;
@@ -22,12 +25,16 @@ export interface Offer {
   total_monthly_cost: number | null;
   photos: string[];
   views_count: number;
+  status: OfferStatus;
+  source: OfferSource;
 }
 
 export interface OfferDetail extends Offer {
   description: string | null;
   created_at: string | null;
   updated_at: string | null;
+  owner_user_id: number | null;
+  rejection_reason: string | null;
 }
 
 export interface Pagination {
@@ -65,6 +72,9 @@ export interface OffersQuery extends OfferFilters {
   order?: SortOrder;
   page?: number;
   limit?: number;
+  /** Tylko panel administratora ("Zarządzanie pokojami") - filtr statusu
+   * moderacji ogłoszeń wynajmujących. Ignorowane przez publiczny /api/offers. */
+  status?: OfferStatus;
 }
 
 /** Partial update payload for PATCH /api/admin/offers/{id} - mirrors
@@ -86,4 +96,6 @@ export interface OfferUpdate {
   has_deposit?: boolean | null;
   total_monthly_cost?: number | null;
   photos?: string[];
+  status?: OfferStatus;
+  rejection_reason?: string | null;
 }
