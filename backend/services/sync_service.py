@@ -920,6 +920,24 @@ def _migrate_add_views_count_to_offers(conn: sqlite3.Connection) -> None:
         conn.execute("ALTER TABLE offers ADD COLUMN views_count INTEGER NOT NULL DEFAULT 0")
 
 
+def _migrate_add_landlord_columns_to_offers(conn: sqlite3.Connection) -> None:
+    """Migracja dla baz utworzonych przed dodaniem obsługi ogłoszeń
+    wynajmujących - kolumny `status`/`source`/`owner_user_id`/`rejection_reason`
+    do `offers`. Istniejące (zsynchronizowane z OLX) oferty dostają domyślnie
+    `status='approved'`, `source='olx'` (patrz DEFAULT w ALTER TABLE)."""
+    existing_columns = {row[1] for row in conn.execute("PRAGMA table_info(offers)").fetchall()}
+    if "status" not in existing_columns:
+        conn.execute("ALTER TABLE offers ADD COLUMN status TEXT NOT NULL DEFAULT 'approved'")
+    if "source" not in existing_columns:
+        conn.execute("ALTER TABLE offers ADD COLUMN source TEXT NOT NULL DEFAULT 'olx'")
+    if "owner_user_id" not in existing_columns:
+        conn.execute("ALTER TABLE offers ADD COLUMN owner_user_id INTEGER")
+    if "rejection_reason" not in existing_columns:
+        conn.execute("ALTER TABLE offers ADD COLUMN rejection_reason TEXT")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_offers_status ON offers(status)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_offers_owner_user_id ON offers(owner_user_id)")
+
+
 def _migrate_add_city_to_sync_runs(conn: sqlite3.Connection) -> None:
     """Migracja dla baz utworzonych przed dodaniem kolumny `city` do `sync_runs`."""
     existing_columns = {row[1] for row in conn.execute("PRAGMA table_info(sync_runs)").fetchall()}

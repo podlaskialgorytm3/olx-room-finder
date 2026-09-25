@@ -7,12 +7,14 @@ tego repozytorium.
 from __future__ import annotations
 
 import json
+import uuid
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any, Optional
 
 from sqlalchemy import Select, func, or_, select
 from sqlalchemy import delete as sa_delete
+from sqlalchemy import insert as sa_insert
 from sqlalchemy import update as sa_update
 from sqlalchemy.orm import Session
 
@@ -35,6 +37,8 @@ class OfferFilters:
     has_deposit: Optional[bool] = None
     has_deposit_cost: Optional[bool] = None
     search: Optional[str] = None
+    status: Optional[str] = None  # 'pending' | 'approved' | 'rejected' - None = brak filtra
+    owner_user_id: Optional[int] = None  # ograniczenie do ofert danego wynajmującego
 
 
 SORTABLE_COLUMNS = {
@@ -86,6 +90,10 @@ def _apply_filters(stmt: Select, filters: OfferFilters) -> Select:
                 offers.c.address.ilike(pattern),
             )
         )
+    if filters.status is not None:
+        stmt = stmt.where(offers.c.status == filters.status)
+    if filters.owner_user_id is not None:
+        stmt = stmt.where(offers.c.owner_user_id == filters.owner_user_id)
     return stmt
 
 
