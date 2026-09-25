@@ -85,6 +85,15 @@ export function Navbar() {
             </Link>
           ) : isUserLoggedIn ? (
             <div className="flex items-center gap-2">
+              {user!.role === "landlord" && (
+                <Link
+                  href="/landlord"
+                  className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                >
+                  <LayoutDashboard className="size-4" />
+                  <span>Panel wynajmującego</span>
+                </Link>
+              )}
               <span className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground">
                 <UserCircle className="size-4" />
                 <span>{user!.full_name}</span>

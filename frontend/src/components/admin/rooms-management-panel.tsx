@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { ArrowDown, ArrowUp, ArrowUpDown, ExternalLink, Pencil, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, Check, ExternalLink, Pencil, Trash2, X } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,17 +15,30 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ErrorState } from "@/components/common/error-state";
 import { PaginationControls } from "@/components/offers/pagination-controls";
 import { OfferEditDialog } from "@/components/admin/offer-edit-dialog";
-import { useAdminOfferDistricts, useAdminOffers, useCityConfigs, useDeleteOffer } from "@/hooks";
+import { useAdminOfferDistricts, useAdminOffers, useCityConfigs, useDeleteOffer, useUpdateOffer } from "@/hooks";
 import { formatCity, formatPln, formatTriState, truncateText } from "@/lib/format";
 import { ApiError } from "@/lib/api";
 import { cn } from "cn";
-import type { OfferDetail, OffersQuery, SortField } from "@/types";
+import type { OfferDetail, OffersQuery, OfferStatus, SortField } from "@/types";
 
 const ALL = "all" as const;
+
+const STATUS_LABELS: Record<OfferStatus, string> = {
+  pending: "Oczekuje na zatwierdzenie",
+  approved: "Opublikowane",
+  rejected: "Odrzucone",
+};
+
+function statusBadgeVariant(status: OfferStatus): "default" | "secondary" | "outline" {
+  if (status === "approved") return "default";
+  if (status === "pending") return "secondary";
+  return "outline";
+}
 
 export function RoomsManagementPanel() {
   const [city, setCity] = useState<string | undefined>(undefined);
   const [district, setDistrict] = useState<string | undefined>(undefined);
+  const [status, setStatus] = useState<OfferStatus | undefined>(undefined);
   const [search, setSearch] = useState("");
   const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
@@ -37,6 +50,7 @@ export function RoomsManagementPanel() {
   const cities = useCityConfigs();
   const districts = useAdminOfferDistricts(city);
   const deleteOffer = useDeleteOffer();
+  const updateOffer = useUpdateOffer();
 
   const handleSort = (field: SortField) => {
     setPage(1);
@@ -52,6 +66,7 @@ export function RoomsManagementPanel() {
     () => ({
       city,
       district,
+      status,
       search: search.trim() || undefined,
       minPrice: minPrice.trim() ? Number(minPrice) : undefined,
       maxPrice: maxPrice.trim() ? Number(maxPrice) : undefined,
@@ -60,7 +75,7 @@ export function RoomsManagementPanel() {
       sort,
       order,
     }),
-    [city, district, search, minPrice, maxPrice, page, sort, order],
+    [city, district, status, search, minPrice, maxPrice, page, sort, order],
   );
 
   const offers = useAdminOffers(query);
@@ -78,6 +93,27 @@ export function RoomsManagementPanel() {
       onSuccess: () => toast.success("Usunięto ofertę."),
       onError: (err) => toast.error(err instanceof ApiError ? err.message : "Nie udało się usunąć oferty."),
     });
+  };
+
+  const handleApprove = (offer: OfferDetail) => {
+    updateOffer.mutate(
+      { id: offer.id, payload: { status: "approved", rejection_reason: null } },
+      {
+        onSuccess: () => toast.success(`Zatwierdzono ogłoszenie "${offer.title}".`),
+        onError: (err) => toast.error(err instanceof ApiError ? err.message : "Nie udało się zatwierdzić ogłoszenia."),
+      },
+    );
+  };
+
+  const handleReject = (offer: OfferDetail) => {
+    const reason = window.prompt("Powód odrzucenia (widoczny dla wynajmującego, opcjonalnie):", "") ?? undefined;
+    updateOffer.mutate(
+      { id: offer.id, payload: { status: "rejected", rejection_reason: reason || null } },
+      {
+        onSuccess: () => toast.success(`Odrzucono ogłoszenie "${offer.title}".`),
+        onError: (err) => toast.error(err instanceof ApiError ? err.message : "Nie udało się odrzucić ogłoszenia."),
+      },
+    );
   };
 
   const renderSortIcon = (field: SortField) => {
@@ -106,9 +142,9 @@ export function RoomsManagementPanel() {
       <Card>
         <CardHeader>
           <CardTitle>Filtry</CardTitle>
-          <CardDescription>Zawęź listę pokoi po mieście, dzielnicy, cenie lub treści ogłoszenia.</CardDescription>
+          <CardDescription>Zawęź listę pokoi po mieście, dzielnicy, cenie, statusie lub treści ogłoszenia.</CardDescription>
         </CardHeader>
-        <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
           <div className="space-y-1.5">
             <Label>Miasto</Label>
             <Select
@@ -142,6 +178,21 @@ export function RoomsManagementPanel() {
                     {d}
                   </SelectItem>
                 ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label>Status</Label>
+            <Select value={status ?? ALL} onValueChange={(v) => resetPageAnd(() => setStatus(v === ALL ? undefined : (v as OfferStatus)))}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Wszystkie statusy" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ALL}>Wszystkie statusy</SelectItem>
+                <SelectItem value="pending">Oczekuje na zatwierdzenie</SelectItem>
+                <SelectItem value="approved">Opublikowane</SelectItem>
+                <SelectItem value="rejected">Odrzucone</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -201,6 +252,7 @@ export function RoomsManagementPanel() {
                     {renderSortableHead("price", "Cena")}
                     {renderSortableHead("total_monthly_cost", "Koszt całkowity")}
                     <TableHead>Negocjacja</TableHead>
+                    <TableHead>Status</TableHead>
                     {renderSortableHead("views_count", "Wyświetlenia", "text-right")}
                     <TableHead className="text-right">Akcje</TableHead>
                   </TableRow>
@@ -230,9 +282,41 @@ export function RoomsManagementPanel() {
                           {formatTriState(offer.negotiable, "Tak", "Nie", "Brak danych")}
                         </Badge>
                       </TableCell>
+                      <TableCell>
+                        <div className="space-y-1">
+                          <Badge variant={statusBadgeVariant(offer.status)}>{STATUS_LABELS[offer.status]}</Badge>
+                          {offer.source === "landlord" && (
+                            <p className="text-xs text-muted-foreground">Od wynajmującego</p>
+                          )}
+                        </div>
+                      </TableCell>
                       <TableCell className="text-right tabular-nums">{offer.views_count}</TableCell>
                       <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1.5">
+                        <div className="flex flex-wrap items-center justify-end gap-1.5">
+                          {offer.status === "pending" && (
+                            <>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="text-green-600 hover:bg-green-600/10"
+                                onClick={() => handleApprove(offer)}
+                                disabled={updateOffer.isPending}
+                              >
+                                <Check className="size-3.5" />
+                                Zatwierdź
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="text-destructive hover:bg-destructive/10"
+                                onClick={() => handleReject(offer)}
+                                disabled={updateOffer.isPending}
+                              >
+                                <X className="size-3.5" />
+                                Odrzuć
+                              </Button>
+                            </>
+                          )}
                           <Button size="sm" variant="outline" asChild>
                             <Link href={`/offers/${encodeURIComponent(offer.id)}`} target="_blank" rel="noopener noreferrer">
                               <ExternalLink className="size-3.5" />
@@ -258,7 +342,7 @@ export function RoomsManagementPanel() {
                   ))}
                   {offers.data.data.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center text-muted-foreground">
+                      <TableCell colSpan={9} className="text-center text-muted-foreground">
                         Brak ofert spełniających wybrane filtry.
                       </TableCell>
                     </TableRow>
@@ -280,3 +364,4 @@ export function RoomsManagementPanel() {
     </div>
   );
 }
+
