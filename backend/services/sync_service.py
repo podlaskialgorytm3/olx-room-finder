@@ -779,8 +779,6 @@ CREATE TABLE IF NOT EXISTS offers (
     rejection_reason TEXT                      -- powód odrzucenia przez administratora
 );
 CREATE INDEX IF NOT EXISTS idx_offers_district ON offers(district);
-CREATE INDEX IF NOT EXISTS idx_offers_status ON offers(status);
-CREATE INDEX IF NOT EXISTS idx_offers_owner_user_id ON offers(owner_user_id);
 
 -- Historia zdarzeń pojedynczych ofert (utworzenie / usunięcie / w przyszłości
 -- zmiana ceny). Rekordy nigdy nie są modyfikowane ani kasowane, więc pozwala
