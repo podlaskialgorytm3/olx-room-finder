@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { ExternalLink, Pencil, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, ExternalLink, Pencil, Trash2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,9 +18,16 @@ import { OfferEditDialog } from "@/components/admin/offer-edit-dialog";
 import { useAdminOfferDistricts, useAdminOffers, useCityConfigs, useDeleteOffer } from "@/hooks";
 import { formatCity, formatPln, formatTriState, truncateText } from "@/lib/format";
 import { ApiError } from "@/lib/api";
-import type { OfferDetail, OffersQuery } from "@/types";
+import { cn } from "cn";
+import type { OfferDetail, OffersQuery, SortField } from "@/types";
 
 const ALL = "all" as const;
+
+const SORTABLE_FIELDS: { field: SortField; label: string }[] = [
+  { field: "price", label: "Cena" },
+  { field: "total_monthly_cost", label: "Koszt całkowity" },
+  { field: "views_count", label: "Wyświetlenia" },
+];
 
 export function RoomsManagementPanel() {
   const [city, setCity] = useState<string | undefined>(undefined);
@@ -29,11 +36,23 @@ export function RoomsManagementPanel() {
   const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
   const [page, setPage] = useState(1);
+  const [sort, setSort] = useState<SortField>("created_at");
+  const [order, setOrder] = useState<"asc" | "desc">("desc");
   const [editingOffer, setEditingOffer] = useState<OfferDetail | null>(null);
 
   const cities = useCityConfigs();
   const districts = useAdminOfferDistricts(city);
   const deleteOffer = useDeleteOffer();
+
+  const handleSort = (field: SortField) => {
+    setPage(1);
+    if (sort === field) {
+      setOrder((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setSort(field);
+      setOrder("desc");
+    }
+  };
 
   const query: OffersQuery = useMemo(
     () => ({
@@ -44,10 +63,10 @@ export function RoomsManagementPanel() {
       maxPrice: maxPrice.trim() ? Number(maxPrice) : undefined,
       page,
       limit: 20,
-      sort: "created_at",
-      order: "desc",
+      sort,
+      order,
     }),
-    [city, district, search, minPrice, maxPrice, page],
+    [city, district, search, minPrice, maxPrice, page, sort, order],
   );
 
   const offers = useAdminOffers(query);

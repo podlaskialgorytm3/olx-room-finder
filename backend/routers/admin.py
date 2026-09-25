@@ -32,7 +32,7 @@ from backend.services import sync_service
 
 router = APIRouter(prefix="/api/admin", tags=["admin"], dependencies=[Depends(require_admin)])
 
-OfferSortField = Literal["price", "total_monthly_cost", "additional_cost", "deposit", "created_at"]
+OfferSortField = Literal["price", "total_monthly_cost", "additional_cost", "deposit", "created_at", "views_count"]
 
 
 def _city_config_out(config: dict) -> CityConfigOut:

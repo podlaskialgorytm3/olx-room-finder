@@ -42,7 +42,7 @@ export interface OfferList {
   pagination: Pagination;
 }
 
-export type SortField = "price" | "total_monthly_cost" | "additional_cost" | "deposit" | "created_at";
+export type SortField = "price" | "total_monthly_cost" | "additional_cost" | "deposit" | "created_at" | "views_count";
 export type SortOrder = "asc" | "desc";
 
 /** Query params accepted by GET /api/offers (and shared by /statistics, /analysis). */

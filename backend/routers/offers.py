@@ -13,7 +13,7 @@ from backend.schemas.offer import OfferDetailOut, OfferListOut, Pagination
 
 router = APIRouter(prefix="/api/offers", tags=["offers"])
 
-SortField = Literal["price", "total_monthly_cost", "additional_cost", "deposit", "created_at"]
+SortField = Literal["price", "total_monthly_cost", "additional_cost", "deposit", "created_at", "views_count"]
 
 
 @router.get("", response_model=OfferListOut)

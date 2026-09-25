@@ -43,6 +43,7 @@ SORTABLE_COLUMNS = {
     "additional_cost": offers.c.additional_cost,
     "deposit": offers.c.deposit,
     "created_at": offers.c.created_at,
+    "views_count": offers.c.views_count,
 }
 
 
