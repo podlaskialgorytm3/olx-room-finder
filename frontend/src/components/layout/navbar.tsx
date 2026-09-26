@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { LayoutDashboard, LogOut, UserCircle } from "lucide-react";
+import { LayoutDashboard, LogOut, UserCircle, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useAdminAuthHydrated, useAdminAuthStore } from "@/lib/admin-auth-store";
@@ -92,6 +92,15 @@ export function Navbar() {
                 >
                   <LayoutDashboard className="size-4" />
                   <span>Panel wynajmującego</span>
+                </Link>
+              )}
+              {user!.role === "tenant" && (
+                <Link
+                  href="/favorites"
+                  className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                >
+                  <Heart className="size-4" />
+                  <span>Ulubione</span>
                 </Link>
               )}
               <span className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground">

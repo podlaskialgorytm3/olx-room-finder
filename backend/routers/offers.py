@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from backend.config import DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE
 from backend.db.session import get_db
 from backend.dependencies import offer_filters_params
+from backend.repositories.favorite_repository import FavoriteRepository
 from backend.repositories.offer_repository import OfferFilters, OfferRepository
 from backend.schemas.offer import OfferDetailOut, OfferListOut, Pagination
 
@@ -49,4 +50,5 @@ def get_offer(offer_id: str, db: Session = Depends(get_db)) -> OfferDetailOut:
     # widoczne później w panelu administratora (zarządzanie pokojami).
     repo.increment_views(offer_id)
     row["views_count"] = row.get("views_count", 0) + 1
+    row["favorites_count"] = FavoriteRepository(db).count_for_offer(offer_id)
     return row

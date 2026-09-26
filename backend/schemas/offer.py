@@ -37,6 +37,7 @@ class OfferDetailOut(OfferOut):
     updated_at: Optional[str] = None
     owner_user_id: Optional[int] = None
     rejection_reason: Optional[str] = None
+    favorites_count: int = 0
 
 
 class Pagination(BaseModel):

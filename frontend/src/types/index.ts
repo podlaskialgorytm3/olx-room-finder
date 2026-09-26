@@ -7,3 +7,4 @@ export * from "./admin";
 export * from "./city";
 export * from "./user";
 export * from "./landlord";
+export * from "./favorite";

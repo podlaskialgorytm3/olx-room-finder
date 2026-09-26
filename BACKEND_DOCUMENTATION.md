@@ -122,6 +122,15 @@ One row per entry in `sync_service.CITIES` (auto-seeded by
   session tokens (12h TTL), checked by the `require_admin` FastAPI dependency
   on every `/api/admin/*` request via `Authorization: Bearer <token>`.
 
+### `favorites` (tenant "liked" rooms)
+
+`id, user_id, offer_id, created_at`, `UNIQUE(user_id, offer_id)`, both FKs
+`ON DELETE CASCADE`. Lets a logged-in tenant (`role='tenant'`) like/unlike a
+room (`backend/routers/favorites.py`, `require_tenant` dependency). The
+per-offer like count is exposed to the admin dashboard as
+`OfferDetailOut.favorites_count` in the "Zarządzanie pokojami" (room
+management) section.
+
 ## 4. API endpoints
 
 ### Health
@@ -189,6 +198,14 @@ also used by `/statistics` and `/analysis`):
   city is unknown.
 - `POST /cities/{city}/sync` → starts `sync_once(city)` in a separate thread
   (202), or 409 if that city's sync is already running.
+
+### Favorites — `backend/routers/favorites.py` (prefix `/api/favorites`, all endpoints require `Authorization: Bearer <token>` for a `role='tenant'` account via `require_tenant`)
+
+- `GET /` — paginated list of the logged-in tenant's liked rooms (`FavoriteListOut { data: OfferDetailOut[], pagination }`).
+- `GET /ids` — `string[]` of offer ids liked by the tenant (used by the frontend to mark hearts on offer cards without one request per card).
+- `GET /{offer_id}` — `FavoriteStatusOut { offer_id, is_favorite, favorites_count }` for a single offer.
+- `POST /{offer_id}` — likes the offer (idempotent), returns `FavoriteStatusOut`. 404 if the offer doesn't exist.
+- `DELETE /{offer_id}` — unlikes the offer, returns `FavoriteStatusOut`.
 
 ## 5. Sync flow (`sync_service.py`)
 

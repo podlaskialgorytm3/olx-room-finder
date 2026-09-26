@@ -73,3 +73,12 @@ sync_runs = Table(
     Column("offers_removed", Integer),
     Column("max_page", Integer),
 )
+
+favorites = Table(
+    "favorites",
+    metadata,
+    Column("id", Integer, primary_key=True),
+    Column("user_id", Integer, nullable=False),
+    Column("offer_id", String, nullable=False),
+    Column("created_at", String),
+)

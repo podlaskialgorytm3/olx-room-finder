@@ -30,4 +30,6 @@ export const queryKeys = {
   adminUser: (id: number) => ["admin", "user", id] as const,
   landlordOffers: (page: number, limit: number) => ["landlord", "offers", page, limit] as const,
   landlordOffer: (id: string) => ["landlord", "offer", id] as const,
+  favoriteIds: () => ["favorites", "ids"] as const,
+  favorites: (page: number, limit: number) => ["favorites", "list", page, limit] as const,
 };

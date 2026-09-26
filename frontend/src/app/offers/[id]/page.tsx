@@ -3,8 +3,9 @@
 import { useState } from "react";
 import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, ExternalLink, ImageOff, MapPin } from "lucide-react";
-import { useOffer } from "@/hooks";
+import { ArrowLeft, ExternalLink, Heart, ImageOff, MapPin } from "lucide-react";
+import { toast } from "sonner";
+import { useOffer, useFavoriteIds, useToggleFavorite } from "@/hooks";
 import { useDistrictStatisticsByName } from "@/hooks";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -14,6 +15,8 @@ import { ErrorState } from "@/components/common/error-state";
 import { PhotoLightbox } from "@/components/offers/photo-lightbox";
 import { formatCity, formatPercent, formatPln, formatTriState } from "@/lib/format";
 import { getPriceDiffColor } from "@/lib/price-diff-color";
+import { ApiError } from "@/lib/api";
+import { useUserAuthHydrated, useUserAuthStore } from "@/lib/user-auth-store";
 import { cn } from "@/lib/utils";
 
 export default function OfferDetailPage() {
@@ -23,6 +26,23 @@ export default function OfferDetailPage() {
   const { data: districtStats } = useDistrictStatisticsByName(offer?.district ?? undefined);
   const [activePhoto, setActivePhoto] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
+
+  const hydrated = useUserAuthHydrated();
+  const user = useUserAuthStore((state) => state.user);
+  const isTenant = hydrated && user?.role === "tenant";
+  const favoriteIds = useFavoriteIds();
+  const isFavorite = isTenant && (favoriteIds.data?.includes(params.id) ?? false);
+  const toggleFavorite = useToggleFavorite();
+
+  const handleToggleFavorite = () => {
+    toggleFavorite.mutate(
+      { offerId: params.id, isFavorite },
+      {
+        onError: (err) =>
+          toast.error(err instanceof ApiError ? err.message : "Nie udało się zaktualizować ulubionych."),
+      },
+    );
+  };
 
   const handleBack = () => {
     // Wracamy przez historię przeglądarki, żeby przywrócić poprzedni URL
@@ -123,7 +143,21 @@ export default function OfferDetailPage() {
 
       {/* Title + price */}
       <div className="space-y-2">
-        <h1 className="text-2xl font-semibold">{offer.title}</h1>
+        <div className="flex items-start justify-between gap-3">
+          <h1 className="text-2xl font-semibold">{offer.title}</h1>
+          {isTenant && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleToggleFavorite}
+              disabled={toggleFavorite.isPending}
+              className="shrink-0"
+            >
+              <Heart className={cn("size-4", isFavorite ? "fill-red-500 text-red-500" : "")} />
+              {isFavorite ? "W ulubionych" : "Dodaj do ulubionych"}
+            </Button>
+          )}
+        </div>
         <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
           <span className="text-3xl font-bold">{formatPln(offer.price)}</span>
           {offer.total_monthly_cost !== null && offer.total_monthly_cost !== undefined && (

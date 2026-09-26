@@ -35,6 +35,9 @@ export interface OfferDetail extends Offer {
   updated_at: string | null;
   owner_user_id: number | null;
   rejection_reason: string | null;
+  /** Łączna liczba polubień - widoczna w panelu administratora
+   * ("Zarządzanie pokojami") i na stronie szczegółów ogłoszenia. */
+  favorites_count: number;
 }
 
 export interface Pagination {

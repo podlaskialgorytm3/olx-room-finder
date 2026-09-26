@@ -864,6 +864,22 @@ CREATE TABLE IF NOT EXISTS user_sessions (
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     expires_at TEXT NOT NULL
 );
+
+-- Ulubione pokoje najemców - pozwala zalogowanemu najemcy (`role='tenant'`)
+-- polubić dane ogłoszenie (`POST /api/favorites/{offer_id}`). Panel
+-- administratora ("Zarządzanie pokojami") pokazuje liczbę polubień per
+-- ogłoszenie - patrz `backend/repositories/favorite_repository.py`.
+CREATE TABLE IF NOT EXISTS favorites (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    offer_id TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE(user_id, offer_id),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (offer_id) REFERENCES offers(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_favorites_user_id ON favorites(user_id);
+CREATE INDEX IF NOT EXISTS idx_favorites_offer_id ON favorites(offer_id);
 """
 
 OFFER_COLUMNS = [

@@ -83,3 +83,15 @@ def require_landlord(user: dict = Depends(require_user)) -> dict:
             detail="Ta sekcja jest dostępna tylko dla kont wynajmującego.",
         )
     return user
+
+
+def require_tenant(user: dict = Depends(require_user)) -> dict:
+    """Dependency chroniąca endpointy ulubionych (`/api/favorites/*`) -
+    wymaga zalogowanego konta (patrz `require_user`) z rolą `tenant`
+    (najemca). Tylko najemcy mogą dodawać ogłoszenia do ulubionych."""
+    if user["role"] != "tenant":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Ta funkcja jest dostępna tylko dla kont najemcy.",
+        )
+    return user

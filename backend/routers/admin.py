@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 
 from backend.db.session import get_db
 from backend.dependencies import offer_filters_params, require_admin
+from backend.repositories.favorite_repository import FavoriteRepository
 from backend.repositories.offer_repository import OfferFilters, OfferRepository
 from backend.schemas.admin import (
     CityConfigCreateIn,
@@ -152,6 +153,14 @@ def list_offers_admin(
     repo = OfferRepository(db)
     rows, total = repo.search(filters, sort=sort, order=order, page=page, limit=limit)
     total_pages = (total + limit - 1) // limit if total else 0
+
+    # Liczba polubień per ogłoszenie (zbiorczo, żeby uniknąć N+1 zapytań) -
+    # widoczna w kolumnie "Polubienia" panelu "Zarządzanie pokojami".
+    favorite_repo = FavoriteRepository(db)
+    counts = favorite_repo.counts_for_offers([row["id"] for row in rows])
+    for row in rows:
+        row["favorites_count"] = counts.get(row["id"], 0)
+
     return OfferAdminListOut(
         data=rows,
         pagination=Pagination(page=page, limit=limit, total=total, total_pages=total_pages),
@@ -173,6 +182,7 @@ def get_offer_admin(offer_id: str, db: Session = Depends(get_db)) -> OfferDetail
     row = repo.get_by_id(offer_id)
     if row is None:
         raise HTTPException(status_code=404, detail=f"Oferta o id={offer_id} nie została znaleziona.")
+    row["favorites_count"] = FavoriteRepository(db).count_for_offer(offer_id)
     return row
 
 
@@ -186,6 +196,7 @@ def update_offer_admin(offer_id: str, payload: OfferUpdateIn, db: Session = Depe
     updated = repo.update(offer_id, values)
     if updated is None:
         raise HTTPException(status_code=404, detail=f"Oferta o id={offer_id} nie została znaleziona.")
+    updated["favorites_count"] = FavoriteRepository(db).count_for_offer(offer_id)
     return updated
 
 

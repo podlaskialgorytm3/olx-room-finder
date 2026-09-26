@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { ArrowDown, ArrowUp, ArrowUpDown, Check, ExternalLink, Pencil, Trash2, X } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, Check, ExternalLink, Heart, Pencil, Trash2, X } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -254,6 +254,7 @@ export function RoomsManagementPanel() {
                     <TableHead>Negocjacja</TableHead>
                     <TableHead>Status</TableHead>
                     {renderSortableHead("views_count", "Wyświetlenia", "text-right")}
+                    <TableHead className="text-right">Polubienia</TableHead>
                     <TableHead className="text-right">Akcje</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -291,6 +292,12 @@ export function RoomsManagementPanel() {
                         </div>
                       </TableCell>
                       <TableCell className="text-right tabular-nums">{offer.views_count}</TableCell>
+                      <TableCell className="text-right">
+                        <span className="inline-flex items-center justify-end gap-1 tabular-nums">
+                          <Heart className="size-3.5 fill-red-500 text-red-500" />
+                          {offer.favorites_count}
+                        </span>
+                      </TableCell>
                       <TableCell className="text-right">
                         <div className="flex flex-wrap items-center justify-end gap-1.5">
                           {offer.status === "pending" && (
@@ -342,7 +349,7 @@ export function RoomsManagementPanel() {
                   ))}
                   {offers.data.data.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={9} className="text-center text-muted-foreground">
+                      <TableCell colSpan={10} className="text-center text-muted-foreground">
                         Brak ofert spełniających wybrane filtry.
                       </TableCell>
                     </TableRow>

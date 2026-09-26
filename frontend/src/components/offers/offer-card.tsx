@@ -1,16 +1,44 @@
+"use client";
+
+import type { MouseEvent } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ImageOff, MapPin, Wallet, Handshake } from "lucide-react";
+import { ImageOff, MapPin, Wallet, Handshake, Heart } from "lucide-react";
+import { toast } from "sonner";
 import type { Offer } from "@/types";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatCity, formatPln, formatTriState } from "@/lib/format";
 import { Button } from "@/components/ui/button";
+import { useFavoriteIds, useToggleFavorite } from "@/hooks";
+import { useUserAuthHydrated, useUserAuthStore } from "@/lib/user-auth-store";
+import { ApiError } from "@/lib/api";
+import { cn } from "@/lib/utils";
 
 export function OfferCard({ offer }: { offer: Offer }) {
   const photo = offer.photos?.[0];
 
   const isNegotiable = offer.negotiable === true;
+
+  const hydrated = useUserAuthHydrated();
+  const user = useUserAuthStore((state) => state.user);
+  const isTenant = hydrated && user?.role === "tenant";
+
+  const favoriteIds = useFavoriteIds();
+  const isFavorite = isTenant && (favoriteIds.data?.includes(offer.id) ?? false);
+  const toggleFavorite = useToggleFavorite();
+
+  const handleToggleFavorite = (e: MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    toggleFavorite.mutate(
+      { offerId: offer.id, isFavorite },
+      {
+        onError: (err) =>
+          toast.error(err instanceof ApiError ? err.message : "Nie udało się zaktualizować ulubionych."),
+      },
+    );
+  };
 
   return (
     <Card className="group overflow-hidden gap-0 py-0 shadow-sm ring-1 ring-foreground/10 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:ring-primary/30">
@@ -36,6 +64,17 @@ export function OfferCard({ offer }: { offer: Offer }) {
             <MapPin className="size-3" /> {formatCity(offer.city)}
             {offer.district ? `, ${offer.district}` : ""}
           </Badge>
+          {isTenant && (
+            <button
+              type="button"
+              onClick={handleToggleFavorite}
+              disabled={toggleFavorite.isPending}
+              aria-label={isFavorite ? "Usuń z ulubionych" : "Dodaj do ulubionych"}
+              className="absolute right-2 top-2 flex size-8 items-center justify-center rounded-full bg-background/90 shadow backdrop-blur-sm transition-colors hover:bg-background"
+            >
+              <Heart className={cn("size-4", isFavorite ? "fill-red-500 text-red-500" : "text-muted-foreground")} />
+            </button>
+          )}
         </div>
       </Link>
 
