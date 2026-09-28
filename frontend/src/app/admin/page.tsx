@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { RefreshCw, LogOut, Trash2, Plus } from "lucide-react";
+import { LogOut, Plus, Settings2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,118 +16,25 @@ import { ErrorState } from "@/components/common/error-state";
 import { RoomsManagementPanel } from "@/components/admin/rooms-management-panel";
 import { AccountsManagementPanel } from "@/components/admin/accounts-management-panel";
 import { useAdminAuthHydrated, useAdminAuthStore } from "@/lib/admin-auth-store";
-import {
-  useAdminLogout,
-  useCancelCitySync,
-  useCityConfigs,
-  useCreateCity,
-  useDeleteCity,
-  useTriggerCitySync,
-  useUpdateCitySyncHour,
-} from "@/hooks";
+import { useAdminLogout, useCityConfigs, useCreateCity } from "@/hooks";
 import { formatDate, formatNumber } from "@/lib/format";
 import { ApiError } from "@/lib/api";
 import type { CityConfig } from "@/types";
 
 function CityRow({ config }: { config: CityConfig }) {
-  const [hour, setHour] = useState(config.sync_hour);
-  const [minute, setMinute] = useState(config.sync_minute);
-  const [displayName, setDisplayName] = useState(config.display_name);
-  const [link, setLink] = useState(config.link ?? "");
-  const updateCity = useUpdateCitySyncHour();
-  const triggerSync = useTriggerCitySync();
-  const cancelSync = useCancelCitySync();
-  const deleteCity = useDeleteCity();
-
-  const dirty =
-    hour !== config.sync_hour ||
-    minute !== config.sync_minute ||
-    displayName !== config.display_name ||
-    link !== (config.link ?? "");
-
-  const handleSave = () => {
-    updateCity.mutate(
-      {
-        city: config.city,
-        payload: { sync_hour: hour, sync_minute: minute, display_name: displayName, link: link || undefined },
-      },
-      {
-        onSuccess: () => toast.success(`Zapisano zmiany dla ${displayName}.`),
-        onError: (err) => {
-          toast.error(err instanceof ApiError ? err.message : "Nie udało się zapisać zmian.");
-        },
-      },
-    );
-  };
-
-  const handleSyncNow = () => {
-    triggerSync.mutate(config.city, {
-      onSuccess: () => toast.success(`Synchronizacja miasta ${config.display_name} uruchomiona.`),
-      onError: (err) => {
-        if (err instanceof ApiError && err.status === 409) {
-          toast.info("Synchronizacja tego miasta już trwa.");
-        } else {
-          toast.error("Nie udało się uruchomić synchronizacji.");
-        }
-      },
-    });
-  };
-
-  const handleCancelSync = () => {
-    cancelSync.mutate(config.city, {
-      onSuccess: () =>
-        toast.success(`Anulowano synchronizację miasta ${config.display_name}. Dotychczas pobrane oferty zostały zapisane.`),
-      onError: (err) => {
-        if (err instanceof ApiError && err.status === 409) {
-          toast.info("Ta synchronizacja już się zakończyła.");
-        } else {
-          toast.error("Nie udało się anulować synchronizacji.");
-        }
-      },
-    });
-  };
-
-  const handleDelete = () => {
-    if (!window.confirm(`Na pewno usunąć miasto ${config.display_name}? Usunięte zostaną też jego oferty.`)) {
-      return;
-    }
-    deleteCity.mutate(config.city, {
-      onSuccess: () => toast.success(`Usunięto miasto ${config.display_name}.`),
-      onError: (err) => {
-        toast.error(err instanceof ApiError ? err.message : "Nie udało się usunąć miasta.");
-      },
-    });
-  };
+  const router = useRouter();
 
   return (
-    <TableRow>
+    <TableRow className="cursor-pointer" onClick={() => router.push(`/admin/cities/${config.city}`)}>
       <TableCell className="min-w-[10rem]">
-        <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
+        <p className="font-medium">{config.display_name}</p>
         <p className="mt-1 text-xs text-muted-foreground">{config.city}</p>
       </TableCell>
-      <TableCell className="min-w-[16rem]">
-        <Input value={link} onChange={(e) => setLink(e.target.value)} placeholder="https://www.olx.pl/nieruchomosci/stancje-pokoje/..." />
+      <TableCell className="min-w-[16rem] max-w-[20rem] truncate text-muted-foreground">
+        {config.link || "—"}
       </TableCell>
       <TableCell>
-        <div className="flex items-center gap-1.5">
-          <Input
-            type="number"
-            min={0}
-            max={23}
-            value={hour}
-            onChange={(e) => setHour(Number(e.target.value))}
-            className="w-16"
-          />
-          <span className="text-muted-foreground">:</span>
-          <Input
-            type="number"
-            min={0}
-            max={59}
-            value={minute}
-            onChange={(e) => setMinute(Number(e.target.value))}
-            className="w-16"
-          />
-        </div>
+        {String(config.sync_hour).padStart(2, "0")}:{String(config.sync_minute).padStart(2, "0")}
       </TableCell>
       <TableCell>{formatNumber(config.offers_count)}</TableCell>
       <TableCell>
@@ -142,41 +49,17 @@ function CityRow({ config }: { config: CityConfig }) {
         )}
       </TableCell>
       <TableCell className="text-right">
-        <div className="flex flex-wrap items-center justify-end gap-1.5">
-          <Button size="sm" variant="outline" onClick={handleSave} disabled={!dirty || updateCity.isPending}>
-            Zapisz
-          </Button>
-          {config.running ? (
-            <Button
-              size="sm"
-              variant="outline"
-              className="text-destructive hover:bg-destructive/10"
-              onClick={handleCancelSync}
-              disabled={config.cancelling || cancelSync.isPending}
-            >
-              Anuluj synchronizację
-            </Button>
-          ) : (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={handleSyncNow}
-              disabled={triggerSync.isPending}
-            >
-              <RefreshCw className={`size-3.5 ${triggerSync.isPending ? "animate-spin" : ""}`} />
-              Synchronizuj
-            </Button>
-          )}
-          <Button
-            size="sm"
-            variant="outline"
-            className="text-destructive hover:bg-destructive/10"
-            onClick={handleDelete}
-            disabled={deleteCity.isPending || config.running}
-          >
-            <Trash2 className="size-3.5" />
-          </Button>
-        </div>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={(e) => {
+            e.stopPropagation();
+            router.push(`/admin/cities/${config.city}`);
+          }}
+        >
+          <Settings2 className="size-3.5" />
+          Zarządzaj
+        </Button>
       </TableCell>
     </TableRow>
   );
@@ -353,7 +236,8 @@ export default function AdminDashboardPage() {
             <CardHeader>
               <CardTitle>Miasta i synchronizacja</CardTitle>
               <CardDescription>
-                Zarządzaj miastami, ich linkami OLX oraz godziną codziennej synchronizacji - albo uruchom ją od razu.
+                Kliknij miasto lub przycisk &quot;Zarządzaj&quot;, aby przejść do jego strony zarządzania i tam zmienić
+                parametry, uruchomić synchronizację albo usunąć miasto.
               </CardDescription>
             </CardHeader>
             <CardContent>
