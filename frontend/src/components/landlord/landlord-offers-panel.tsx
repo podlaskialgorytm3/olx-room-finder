@@ -366,6 +366,7 @@ function EditOfferDialog({ offer, onOpenChange }: { offer: OfferDetail | null; o
       district: form.district.trim() || null,
       address: form.address.trim() || null,
       price: Number(form.price),
+      area_m2: toNumberOrUndefined(form.areaM2) ?? null,
       total_monthly_cost: toNumberOrUndefined(form.totalMonthlyCost) ?? null,
       additional_cost: toNumberOrUndefined(form.additionalCost) ?? null,
       has_additional_cost: form.additionalCost.trim() ? true : null,
