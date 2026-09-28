@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, ExternalLink, Heart, ImageOff, MapPin } from "lucide-react";
+import { ArrowLeft, ExternalLink, Heart, ImageOff, MapPin, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { useOffer, useFavoriteIds, useToggleFavorite } from "@/hooks";
 import { useDistrictStatisticsByName } from "@/hooks";
@@ -13,10 +13,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import { ErrorState } from "@/components/common/error-state";
 import { PhotoLightbox } from "@/components/offers/photo-lightbox";
+import { OfferEditDialog } from "@/components/admin/offer-edit-dialog";
 import { formatCity, formatPercent, formatPln, formatTriState } from "@/lib/format";
 import { getPriceDiffColor } from "@/lib/price-diff-color";
 import { ApiError } from "@/lib/api";
 import { useUserAuthHydrated, useUserAuthStore } from "@/lib/user-auth-store";
+import { useAdminAuthHydrated, useAdminAuthStore } from "@/lib/admin-auth-store";
 import { cn } from "@/lib/utils";
 
 export default function OfferDetailPage() {
@@ -26,10 +28,14 @@ export default function OfferDetailPage() {
   const { data: districtStats } = useDistrictStatisticsByName(offer?.district ?? undefined);
   const [activePhoto, setActivePhoto] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
 
   const hydrated = useUserAuthHydrated();
   const user = useUserAuthStore((state) => state.user);
   const isTenant = hydrated && user?.role === "tenant";
+  const adminHydrated = useAdminAuthHydrated();
+  const adminToken = useAdminAuthStore((state) => state.token);
+  const isAdmin = adminHydrated && !!adminToken;
   const favoriteIds = useFavoriteIds();
   const isFavorite = isTenant && (favoriteIds.data?.includes(params.id) ?? false);
   const toggleFavorite = useToggleFavorite();
@@ -145,18 +151,25 @@ export default function OfferDetailPage() {
       <div className="space-y-2">
         <div className="flex items-start justify-between gap-3">
           <h1 className="text-2xl font-semibold">{offer.title}</h1>
-          {isTenant && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleToggleFavorite}
-              disabled={toggleFavorite.isPending}
-              className="shrink-0"
-            >
-              <Heart className={cn("size-4", isFavorite ? "fill-red-500 text-red-500" : "")} />
-              {isFavorite ? "W ulubionych" : "Dodaj do ulubionych"}
-            </Button>
-          )}
+          <div className="flex shrink-0 gap-2">
+            {isAdmin && (
+              <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
+                <Pencil className="size-4" />
+                Edytuj
+              </Button>
+            )}
+            {isTenant && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleToggleFavorite}
+                disabled={toggleFavorite.isPending}
+              >
+                <Heart className={cn("size-4", isFavorite ? "fill-red-500 text-red-500" : "")} />
+                {isFavorite ? "W ulubionych" : "Dodaj do ulubionych"}
+              </Button>
+            )}
+          </div>
         </div>
         <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
           <span className="text-3xl font-bold">{formatPln(offer.price)}</span>
@@ -218,6 +231,17 @@ export default function OfferDetailPage() {
             Otwórz ogłoszenie OLX <ExternalLink className="size-4" />
           </a>
         </Button>
+      )}
+
+      {isAdmin && (
+        <OfferEditDialog
+          offer={offer}
+          open={editOpen}
+          onOpenChange={(open) => {
+            setEditOpen(open);
+            if (!open) refetch();
+          }}
+        />
       )}
     </div>
   );
