@@ -74,9 +74,6 @@ def create_city(payload: CityConfigCreateIn) -> CityConfigOut:
         config = sync_service.create_city_config(
             city=payload.city,
             display_name=payload.display_name,
-            link=payload.link,
-            sync_hour=payload.sync_hour,
-            sync_minute=payload.sync_minute,
         )
     except sync_service.InvalidOlxLinkError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc

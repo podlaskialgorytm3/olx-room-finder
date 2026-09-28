@@ -36,9 +36,6 @@ class CityConfigCreateIn(BaseModel):
         description="Kod miasta (litery/cyfry/podkreślenie, np. LUBLIN).",
     )
     display_name: str = Field(min_length=1, max_length=100, description="Nazwa wyświetlana, np. Lublin.")
-    link: str = Field(description="Link do listingu OLX kategorii pokoje/stancje dla tego miasta.")
-    sync_hour: int = Field(default=2, ge=0, le=23, description="Godzina codziennej synchronizacji (0-23)")
-    sync_minute: int = Field(default=0, ge=0, le=59, description="Minuta codziennej synchronizacji (0-59)")
 
     @field_validator("city")
     @classmethod

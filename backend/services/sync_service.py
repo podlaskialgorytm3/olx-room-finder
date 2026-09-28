@@ -1102,16 +1102,17 @@ def get_city_category_sync_minute(config: dict[str, Any], category: str = CATEGO
 def create_city_config(
     city: str,
     display_name: str,
-    link: str,
+    link: Optional[str] = None,
     sync_hour: int = RUN_HOUR,
     sync_minute: int = RUN_MINUTE,
 ) -> dict[str, Any]:
-    """Tworzy nowe miasto w `city_configs` z linkiem kategorii pokoje/stancje
-    (link kategorii mieszkania konfiguruje się później, na stronie
-    zarządzania danym miastem). `link` musi być zwalidowany wcześniej przez
-    `validate_olx_listing_link` (rzuca `InvalidOlxLinkError`, jeśli nie jest
-    linkiem OLX kategorii pokoje/stancje)."""
-    normalized_link = validate_olx_listing_link(link, CATEGORY_ROOM)
+    """Tworzy nowe miasto w `city_configs` - tylko kod i nazwa są wymagane.
+    Link do listingu OLX (osobno dla pokoi i mieszkań) oraz harmonogram
+    synchronizacji konfiguruje się później, na stronie zarządzania danym
+    miastem/kategorią. Jeśli `link` zostanie podany od razu, musi być
+    zwalidowanym linkiem OLX kategorii pokoje/stancje (rzuca
+    `InvalidOlxLinkError` w przeciwnym razie)."""
+    normalized_link = validate_olx_listing_link(link, CATEGORY_ROOM) if link else None
     with closing(get_connection()) as conn:
         existing = conn.execute("SELECT 1 FROM city_configs WHERE city = ?", (city,)).fetchone()
         if existing:
