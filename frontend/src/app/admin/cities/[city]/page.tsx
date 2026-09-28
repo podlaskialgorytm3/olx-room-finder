@@ -3,7 +3,7 @@
 import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { ArrowLeft, RefreshCw, Trash2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Trash2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,28 +12,19 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/common/error-state";
 import { useAdminAuthHydrated, useAdminAuthStore } from "@/lib/admin-auth-store";
-import {
-  useCancelCitySync,
-  useCityConfigs,
-  useDeleteCity,
-  useTriggerCitySync,
-  useUpdateCitySyncHour,
-} from "@/hooks";
+import { useCityConfigs, useDeleteCity, useUpdateCitySyncHour } from "@/hooks";
 import { formatDate, formatNumber } from "@/lib/format";
 import { ApiError } from "@/lib/api";
 import type { CityCategoryConfig, CityConfig, OfferCategoryKey } from "@/types";
 
 const CATEGORY_LABELS: Record<OfferCategoryKey, string> = { room: "Pokoje", apartment: "Mieszkania" };
-const CATEGORY_LINK_HINTS: Record<OfferCategoryKey, string> = {
-  room: "https://www.olx.pl/nieruchomosci/stancje-pokoje/...",
-  apartment: "https://www.olx.pl/nieruchomosci/mieszkania/wynajem/...",
-};
 
-/** Editable form for a single city+category (pokoje/mieszkania), keyed by
- * `${config.city}-${category}` so local state (re)initializes cleanly
- * whenever the underlying record changes. Each category has its own
- * independent OLX link and sync schedule/trigger/cancel. */
-function CategoryEditor({
+/** Klikalna karta - podsumowanie jednej kategorii (pokoje/mieszkania) z
+ * przejściem na jej osobną podstronę zarządzania
+ * (`/admin/cities/[city]/rooms` lub `/admin/cities/[city]/apartments`).
+ * Każda kategoria ma tam własny link OLX i harmonogram synchronizacji,
+ * niezależny od drugiej. */
+function CategoryLinkCard({
   city,
   category,
   categoryConfig,
@@ -42,66 +33,14 @@ function CategoryEditor({
   category: OfferCategoryKey;
   categoryConfig: CityCategoryConfig;
 }) {
-  const updateCity = useUpdateCitySyncHour();
-  const triggerSync = useTriggerCitySync();
-  const cancelSync = useCancelCitySync();
-
-  const [hour, setHour] = useState(categoryConfig.sync_hour);
-  const [minute, setMinute] = useState(categoryConfig.sync_minute);
-  const [link, setLink] = useState(categoryConfig.link ?? "");
-
-  const dirty = hour !== categoryConfig.sync_hour || minute !== categoryConfig.sync_minute || link !== (categoryConfig.link ?? "");
-
+  const router = useRouter();
   const label = CATEGORY_LABELS[category];
 
-  const handleSave = () => {
-    updateCity.mutate(
-      { city, payload: { category, sync_hour: hour, sync_minute: minute, link } },
-      {
-        onSuccess: () => toast.success(`Zapisano ustawienia (${label}).`),
-        onError: (err) => {
-          toast.error(err instanceof ApiError ? err.message : "Nie udało się zapisać zmian.");
-        },
-      },
-    );
-  };
-
-  const handleSyncNow = () => {
-    triggerSync.mutate(
-      { city, category },
-      {
-        onSuccess: () => toast.success(`Synchronizacja (${label}) uruchomiona.`),
-        onError: (err) => {
-          if (err instanceof ApiError && err.status === 409) {
-            toast.info("Synchronizacja już trwa.");
-          } else if (err instanceof ApiError && err.status === 422) {
-            toast.error("Ustaw najpierw link do listingu OLX dla tej kategorii.");
-          } else {
-            toast.error("Nie udało się uruchomić synchronizacji.");
-          }
-        },
-      },
-    );
-  };
-
-  const handleCancelSync = () => {
-    cancelSync.mutate(
-      { city, category },
-      {
-        onSuccess: () => toast.success(`Anulowano synchronizację (${label}). Dotychczas pobrane oferty zostały zapisane.`),
-        onError: (err) => {
-          if (err instanceof ApiError && err.status === 409) {
-            toast.info("Ta synchronizacja już się zakończyła.");
-          } else {
-            toast.error("Nie udało się anulować synchronizacji.");
-          }
-        },
-      },
-    );
-  };
-
   return (
-    <Card>
+    <Card
+      className="cursor-pointer transition-colors hover:border-primary/50"
+      onClick={() => router.push(`/admin/cities/${city}/${category === "room" ? "rooms" : "apartments"}`)}
+    >
       <CardHeader>
         <div className="flex items-center justify-between gap-4">
           <CardTitle>{label}</CardTitle>
@@ -112,41 +51,9 @@ function CategoryEditor({
           ) : null}
         </div>
       </CardHeader>
-      <CardContent className="space-y-6">
-        <div className="space-y-1.5">
-          <Label htmlFor={`${category}-link`}>Link do listingu OLX</Label>
-          <Input
-            id={`${category}-link`}
-            value={link}
-            onChange={(e) => setLink(e.target.value)}
-            placeholder={CATEGORY_LINK_HINTS[category]}
-          />
-        </div>
-
-        <div className="space-y-1.5">
-          <Label>Godzina synchronizacji</Label>
-          <div className="flex items-center gap-1.5">
-            <Input
-              type="number"
-              min={0}
-              max={23}
-              value={hour}
-              onChange={(e) => setHour(Number(e.target.value))}
-              className="w-20"
-            />
-            <span className="text-muted-foreground">:</span>
-            <Input
-              type="number"
-              min={0}
-              max={59}
-              value={minute}
-              onChange={(e) => setMinute(Number(e.target.value))}
-              className="w-20"
-            />
-          </div>
-        </div>
-
-        <div className="grid gap-4 sm:grid-cols-2">
+      <CardContent className="space-y-4">
+        <p className="truncate text-sm text-muted-foreground">{categoryConfig.link || "— brak linku —"}</p>
+        <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1">
             <p className="text-sm text-muted-foreground">Liczba ofert</p>
             <p className="font-medium">{formatNumber(categoryConfig.offers_count)}</p>
@@ -158,27 +65,10 @@ function CategoryEditor({
             </p>
           </div>
         </div>
-
-        <div className="flex flex-wrap items-center gap-2 border-t pt-4">
-          <Button onClick={handleSave} disabled={!dirty || updateCity.isPending}>
-            Zapisz zmiany
-          </Button>
-          {categoryConfig.running ? (
-            <Button
-              variant="outline"
-              className="text-destructive hover:bg-destructive/10"
-              onClick={handleCancelSync}
-              disabled={categoryConfig.cancelling || cancelSync.isPending}
-            >
-              Anuluj synchronizację
-            </Button>
-          ) : (
-            <Button variant="outline" onClick={handleSyncNow} disabled={triggerSync.isPending || !categoryConfig.link}>
-              <RefreshCw className={`size-3.5 ${triggerSync.isPending ? "animate-spin" : ""}`} />
-              Synchronizuj teraz
-            </Button>
-          )}
-        </div>
+        <Button variant="outline" className="w-full">
+          Zarządzaj kategorią {label.toLowerCase()}
+          <ArrowRight className="size-3.5" />
+        </Button>
       </CardContent>
     </Card>
   );
@@ -186,7 +76,7 @@ function CategoryEditor({
 
 /** Panel zarządzania danym miastem - nazwa miasta jest wspólna, natomiast
  * pokoje i mieszkania mają całkowicie niezależne linki OLX i harmonogramy
- * synchronizacji (patrz `CategoryEditor`). */
+ * synchronizacji, zarządzane na osobnych podstronach (patrz `CategoryLinkCard`). */
 function CityEditor({ config }: { config: CityConfig }) {
   const router = useRouter();
   const updateCity = useUpdateCitySyncHour();
@@ -261,9 +151,9 @@ function CityEditor({ config }: { config: CityConfig }) {
         </CardContent>
       </Card>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <CategoryEditor city={config.city} category="room" categoryConfig={config.rooms} />
-        <CategoryEditor city={config.city} category="apartment" categoryConfig={config.apartments} />
+      <div className="grid gap-6 sm:grid-cols-2">
+        <CategoryLinkCard city={config.city} category="room" categoryConfig={config.rooms} />
+        <CategoryLinkCard city={config.city} category="apartment" categoryConfig={config.apartments} />
       </div>
     </div>
   );
