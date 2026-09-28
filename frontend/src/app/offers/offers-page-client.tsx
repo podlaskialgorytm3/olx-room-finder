@@ -17,14 +17,21 @@ import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useOffers } from "@/hooks";
 import { useSelectedCity, DEFAULT_CITY } from "@/lib/city-store";
+import { useSelectedCategory } from "@/lib/category-store";
 import { parseOffersQuery, offersQueryToParams } from "@/lib/url-filters";
 import { PRICE_RANGE, TOTAL_COST_RANGE } from "@/lib/constants";
 import type { OffersQuery, SortField, SortOrder } from "@/types";
+
+const CATEGORY_HEADINGS: Record<"room" | "apartment", string> = {
+  room: "Oferty pokoi",
+  apartment: "Oferty mieszkań",
+};
 
 export function OffersPageClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const city = useSelectedCity();
+  const category = useSelectedCategory();
   const isWarsaw = city === DEFAULT_CITY;
 
   const query = useMemo(() => parseOffersQuery(searchParams), [searchParams]);
@@ -49,7 +56,7 @@ export function OffersPageClient() {
     <div className="mx-auto max-w-7xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">
       <div className="space-y-3">
         <h1 className="flex flex-wrap items-baseline gap-x-2 text-2xl font-semibold tracking-tight">
-          <span>Oferty pokoi -</span>
+          <span>{CATEGORY_HEADINGS[category]} -</span>
           <CitySelect variant="heading" />
         </h1>
         <SearchBar value={query.search ?? ""} onChange={(search) => updateQuery({ search: search || undefined })} />

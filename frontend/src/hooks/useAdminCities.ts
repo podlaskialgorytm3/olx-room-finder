@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { adminApi } from "@/lib/api";
 import { useAdminAuthStore } from "@/lib/admin-auth-store";
 import { queryKeys } from "@/lib/query-keys";
-import type { CityConfigCreate, CityConfigUpdate } from "@/types";
+import type { CityConfigCreate, CityConfigUpdate, OfferCategoryKey } from "@/types";
 
 export function useCityConfigs() {
   const token = useAdminAuthStore((state) => state.token);
@@ -51,7 +51,8 @@ export function useDeleteCity() {
 export function useTriggerCitySync() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (city: string) => adminApi.triggerCitySync(city),
+    mutationFn: ({ city, category }: { city: string; category?: OfferCategoryKey }) =>
+      adminApi.triggerCitySync(city, category),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.adminCities() });
     },
@@ -61,7 +62,8 @@ export function useTriggerCitySync() {
 export function useCancelCitySync() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (city: string) => adminApi.cancelCitySync(city),
+    mutationFn: ({ city, category }: { city: string; category?: OfferCategoryKey }) =>
+      adminApi.cancelCitySync(city, category),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.adminCities() });
     },

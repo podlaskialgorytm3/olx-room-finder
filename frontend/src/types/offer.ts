@@ -7,11 +7,13 @@
  */
 export type OfferStatus = "pending" | "approved" | "rejected";
 export type OfferSource = "olx" | "landlord";
+export type OfferCategory = "room" | "apartment";
 
 export interface Offer {
   id: string;
   title: string;
   city: string;
+  category: OfferCategory;
   district: string | null;
   price: number | null;
   negotiable: boolean | null;
@@ -58,6 +60,7 @@ export type SortOrder = "asc" | "desc";
 /** Query params accepted by GET /api/offers (and shared by /statistics, /analysis). */
 export interface OfferFilters {
   city?: string;
+  category?: OfferCategory;
   district?: string;
   minPrice?: number;
   maxPrice?: number;
@@ -86,6 +89,7 @@ export interface OffersQuery extends OfferFilters {
 export interface OfferUpdate {
   title?: string;
   city?: string;
+  category?: OfferCategory;
   district?: string | null;
   price?: number | null;
   negotiable?: boolean | null;

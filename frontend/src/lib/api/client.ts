@@ -1,5 +1,5 @@
 /**
- * Low-level HTTP client for the OLX Room Finder REST API.
+ * Low-level HTTP client for the Living Finder REST API.
  *
  * All API modules in `lib/api/*` build on top of `apiFetch`. Never call
  * `fetch()` directly from components/hooks — go through this layer so that

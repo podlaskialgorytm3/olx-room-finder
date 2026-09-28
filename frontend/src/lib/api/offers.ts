@@ -4,6 +4,7 @@ import type { OfferDetail, OfferFilters, OfferList, OffersQuery } from "@/types"
 function filtersToQuery(filters: OfferFilters): Record<string, unknown> {
   return {
     city: filters.city,
+    category: filters.category,
     district: filters.district,
     minPrice: filters.minPrice,
     maxPrice: filters.maxPrice,

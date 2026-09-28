@@ -4,15 +4,16 @@ from typing import Literal, Optional
 
 from pydantic import BaseModel, Field, field_validator
 
-from backend.schemas.offer import OfferDetailOut, OfferStatus, Pagination
+from backend.schemas.offer import OfferCategory, OfferDetailOut, OfferStatus, Pagination
 from backend.schemas.sync import SyncRunOut
 
 CITY_CODE_PATTERN = r"^[A-Za-z0-9_]{2,50}$"
 
 
-class CityConfigOut(BaseModel):
-    city: str
-    display_name: str
+class CityCategoryConfigOut(BaseModel):
+    """Konfiguracja i status synchronizacji pojedynczej kategorii ogłoszeń
+    (pokoje albo mieszkania) dla danego miasta."""
+
     link: Optional[str] = None
     sync_hour: int
     sync_minute: int
@@ -20,6 +21,13 @@ class CityConfigOut(BaseModel):
     running: bool
     cancelling: bool = False
     last_run: Optional[SyncRunOut] = None
+
+
+class CityConfigOut(BaseModel):
+    city: str
+    display_name: str
+    rooms: CityCategoryConfigOut
+    apartments: CityCategoryConfigOut
 
 
 class CityConfigCreateIn(BaseModel):
@@ -47,10 +55,15 @@ class CityConfigCreateIn(BaseModel):
 
 
 class CityConfigUpdateIn(BaseModel):
+    category: Literal["room", "apartment"] = Field(
+        default="room", description="Kategoria ogłoszeń, której dotyczy aktualizacja linku/harmonogramu."
+    )
     sync_hour: int = Field(ge=0, le=23, description="Godzina codziennej synchronizacji (0-23)")
     sync_minute: int = Field(ge=0, le=59, description="Minuta codziennej synchronizacji (0-59)")
     display_name: Optional[str] = Field(default=None, min_length=1, max_length=100)
-    link: Optional[str] = Field(default=None, description="Nowy link do listingu OLX (opcjonalnie).")
+    link: Optional[str] = Field(
+        default=None, description="Nowy link do listingu OLX dla wybranej kategorii (opcjonalnie; pusty string czyści link)."
+    )
 
 
 class CitySyncTriggerOut(BaseModel):
@@ -81,6 +94,7 @@ class OfferUpdateIn(BaseModel):
 
     title: Optional[str] = Field(default=None, min_length=1)
     city: Optional[str] = Field(default=None, min_length=1)
+    category: Optional[OfferCategory] = Field(default=None, description="Kategoria ogłoszenia: pokój albo mieszkanie.")
     district: Optional[str] = None
     price: Optional[float] = Field(default=None, ge=0)
     negotiable: Optional[bool] = None

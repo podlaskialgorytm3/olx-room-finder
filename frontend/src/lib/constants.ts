@@ -1,4 +1,4 @@
-/** Canonical list of Warsaw districts covered by the OLX Room Finder dataset. */
+/** Canonical list of Warsaw districts covered by the Living Finder dataset. */
 export const WARSAW_DISTRICTS = [
   "Bemowo",
   "Białołęka",

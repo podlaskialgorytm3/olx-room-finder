@@ -14,13 +14,20 @@ import { OfferGrid } from "@/components/offers/offer-grid";
 import { Button } from "@/components/ui/button";
 import { useOffers, useStatisticsOverview } from "@/hooks";
 import { useSelectedCity, DEFAULT_CITY } from "@/lib/city-store";
+import { useSelectedCategory } from "@/lib/category-store";
 import { formatNumber, formatPln } from "@/lib/format";
 import { countActiveFilters } from "@/lib/filter-utils";
 import type { OfferFilters } from "@/types";
 
+const CATEGORY_HERO_HEADINGS: Record<"room" | "apartment", string> = {
+  room: "Znajdź pokój w",
+  apartment: "Znajdź mieszkanie w",
+};
+
 export default function HomePage() {
   const router = useRouter();
   const city = useSelectedCity();
+  const category = useSelectedCategory();
   const isWarsaw = city === DEFAULT_CITY;
   const [filters, setFilters] = useState<OfferFilters>({});
 
@@ -51,7 +58,7 @@ export default function HomePage() {
       <section className="space-y-4">
         <div>
           <h1 className="flex flex-wrap items-baseline gap-x-2 text-2xl font-semibold tracking-tight sm:text-3xl">
-            <span>Znajdź pokój w</span>
+            <span>{CATEGORY_HERO_HEADINGS[category]}</span>
             <CitySelect variant="heading" />
           </h1>
           <p className="mt-1 text-muted-foreground">

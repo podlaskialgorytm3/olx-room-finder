@@ -21,34 +21,44 @@ import { formatDate, formatNumber } from "@/lib/format";
 import { ApiError } from "@/lib/api";
 import type { CityConfig } from "@/types";
 
+function CategorySummary({ label, config }: { label: string; config: CityConfig["rooms"] }) {
+  return (
+    <div className="flex flex-col gap-0.5">
+      <div className="flex items-center gap-1.5">
+        <span className="text-xs font-medium text-muted-foreground">{label}</span>
+        {config.running ? (
+          <Badge variant="secondary" className="animate-pulse">
+            {config.cancelling ? "Anulowanie…" : "W trakcie…"}
+          </Badge>
+        ) : null}
+      </div>
+      <p className="max-w-[16rem] truncate text-sm text-muted-foreground">{config.link || "— brak linku —"}</p>
+      <p className="text-xs text-muted-foreground">
+        {String(config.sync_hour).padStart(2, "0")}:{String(config.sync_minute).padStart(2, "0")} · {formatNumber(config.offers_count)} ofert
+        {!config.running && (config.last_run?.finished_at || config.last_run?.started_at)
+          ? ` · ${formatDate(config.last_run?.finished_at ?? config.last_run?.started_at)}`
+          : ""}
+      </p>
+    </div>
+  );
+}
+
 function CityRow({ config }: { config: CityConfig }) {
   const router = useRouter();
 
   return (
     <TableRow className="cursor-pointer" onClick={() => router.push(`/admin/cities/${config.city}`)}>
-      <TableCell className="min-w-[10rem]">
+      <TableCell className="min-w-[10rem] align-top">
         <p className="font-medium">{config.display_name}</p>
         <p className="mt-1 text-xs text-muted-foreground">{config.city}</p>
       </TableCell>
-      <TableCell className="min-w-[16rem] max-w-[20rem] truncate text-muted-foreground">
-        {config.link || "—"}
+      <TableCell className="min-w-[16rem] align-top">
+        <CategorySummary label="Pokoje" config={config.rooms} />
       </TableCell>
-      <TableCell>
-        {String(config.sync_hour).padStart(2, "0")}:{String(config.sync_minute).padStart(2, "0")}
+      <TableCell className="min-w-[16rem] align-top">
+        <CategorySummary label="Mieszkania" config={config.apartments} />
       </TableCell>
-      <TableCell>{formatNumber(config.offers_count)}</TableCell>
-      <TableCell>
-        {config.running ? (
-          <Badge variant="secondary" className="animate-pulse">
-            {config.cancelling ? "Anulowanie…" : "W trakcie…"}
-          </Badge>
-        ) : (
-          <span className="text-xs text-muted-foreground">
-            {formatDate(config.last_run?.finished_at ?? config.last_run?.started_at)}
-          </span>
-        )}
-      </TableCell>
-      <TableCell className="text-right">
+      <TableCell className="text-right align-top">
         <Button
           size="sm"
           variant="outline"
@@ -248,10 +258,8 @@ export default function AdminDashboardPage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Miasto</TableHead>
-                      <TableHead>Link OLX</TableHead>
-                      <TableHead>Godzina synchronizacji</TableHead>
-                      <TableHead>Liczba ofert</TableHead>
-                      <TableHead>Ostatnia synchronizacja</TableHead>
+                      <TableHead>Pokoje</TableHead>
+                      <TableHead>Mieszkania</TableHead>
                       <TableHead className="text-right">Akcje</TableHead>
                     </TableRow>
                   </TableHeader>

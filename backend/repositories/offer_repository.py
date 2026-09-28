@@ -27,6 +27,7 @@ _BOOL_COLUMNS = {"negotiable", "has_additional_cost", "has_deposit", "has_deposi
 @dataclass
 class OfferFilters:
     city: Optional[str] = None
+    category: Optional[str] = None  # 'room' | 'apartment' - None = brak filtra (wszystkie kategorie)
     district: Optional[str] = None
     min_price: Optional[float] = None
     max_price: Optional[float] = None
@@ -54,6 +55,8 @@ SORTABLE_COLUMNS = {
 def _apply_filters(stmt: Select, filters: OfferFilters) -> Select:
     if filters.city:
         stmt = stmt.where(offers.c.city == filters.city)
+    if filters.category:
+        stmt = stmt.where(offers.c.category == filters.category)
     if filters.district:
         stmt = stmt.where(offers.c.district == filters.district)
     if filters.min_price is not None:

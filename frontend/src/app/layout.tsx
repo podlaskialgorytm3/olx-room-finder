@@ -18,8 +18,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "OLX Room Finder",
-  description: "Interaktywna wyszukiwarka i panel analityczny rynku pokoi w Warszawie na podstawie ofert OLX.",
+  title: "Living Finder",
+  description: "Interaktywna wyszukiwarka i panel analityczny rynku pokoi i mieszkań na wynajem na podstawie ofert OLX.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

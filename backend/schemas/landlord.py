@@ -12,7 +12,7 @@ from typing import Optional
 
 from pydantic import BaseModel, Field, field_validator
 
-from backend.schemas.offer import OfferDetailOut, Pagination
+from backend.schemas.offer import OfferCategory, OfferDetailOut, Pagination
 
 
 class LandlordOfferCreateIn(BaseModel):
@@ -21,6 +21,7 @@ class LandlordOfferCreateIn(BaseModel):
 
     title: str = Field(min_length=1, max_length=200)
     city: str = Field(min_length=1, description="Kod miasta (litery/cyfry/podkreślenie, np. WARSZAWA).")
+    category: OfferCategory = Field(default="room", description="Kategoria ogłoszenia: pokój albo mieszkanie.")
     district: Optional[str] = None
     price: float = Field(ge=0, description="Cena podstawowa (bez dodatkowych opłat).")
     negotiable: Optional[bool] = None
@@ -63,6 +64,7 @@ class LandlordOfferUpdateIn(BaseModel):
 
     title: Optional[str] = Field(default=None, min_length=1, max_length=200)
     city: Optional[str] = Field(default=None, min_length=1)
+    category: Optional[OfferCategory] = Field(default=None, description="Kategoria ogłoszenia: pokój albo mieszkanie.")
     district: Optional[str] = None
     price: Optional[float] = Field(default=None, ge=0)
     negotiable: Optional[bool] = None

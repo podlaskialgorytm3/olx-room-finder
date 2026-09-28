@@ -3,9 +3,9 @@
 import type { SyncRun } from "./sync";
 import type { OfferDetail, Pagination } from "./offer";
 
-export interface CityConfig {
-  city: string;
-  display_name: string;
+export type OfferCategoryKey = "room" | "apartment";
+
+export interface CityCategoryConfig {
   link: string | null;
   sync_hour: number;
   sync_minute: number;
@@ -13,6 +13,13 @@ export interface CityConfig {
   running: boolean;
   cancelling: boolean;
   last_run: SyncRun | null;
+}
+
+export interface CityConfig {
+  city: string;
+  display_name: string;
+  rooms: CityCategoryConfig;
+  apartments: CityCategoryConfig;
 }
 
 export interface CityConfigCreate {
@@ -24,6 +31,7 @@ export interface CityConfigCreate {
 }
 
 export interface CityConfigUpdate {
+  category?: OfferCategoryKey;
   sync_hour: number;
   sync_minute: number;
   display_name?: string;

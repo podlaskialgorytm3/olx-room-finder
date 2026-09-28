@@ -17,6 +17,7 @@ from backend.dependencies import offer_filters_params, require_admin
 from backend.repositories.favorite_repository import FavoriteRepository
 from backend.repositories.offer_repository import OfferFilters, OfferRepository
 from backend.schemas.admin import (
+    CityCategoryConfigOut,
     CityConfigCreateIn,
     CityConfigOut,
     CityConfigUpdateIn,
@@ -36,19 +37,26 @@ router = APIRouter(prefix="/api/admin", tags=["admin"], dependencies=[Depends(re
 OfferSortField = Literal["price", "total_monthly_cost", "additional_cost", "deposit", "created_at", "views_count"]
 
 
+def _category_config_out(city: str, config: dict, category: str) -> CityCategoryConfigOut:
+    last_run = sync_service.get_last_run(city, category)
+    return CityCategoryConfigOut(
+        link=sync_service.get_city_category_link(config, category),
+        sync_hour=sync_service.get_city_category_sync_hour(config, category),
+        sync_minute=sync_service.get_city_category_sync_minute(config, category),
+        offers_count=sync_service.count_offers(city, category),
+        running=sync_service.is_sync_running(city, category),
+        cancelling=sync_service.is_sync_cancelling(city, category),
+        last_run=SyncRunOut(**last_run) if last_run else None,
+    )
+
+
 def _city_config_out(config: dict) -> CityConfigOut:
     city = config["city"]
-    last_run = sync_service.get_last_run(city)
     return CityConfigOut(
         city=city,
         display_name=config["display_name"],
-        link=config.get("link"),
-        sync_hour=config["sync_hour"],
-        sync_minute=config["sync_minute"],
-        offers_count=sync_service.count_offers(city),
-        running=sync_service.is_sync_running(city),
-        cancelling=sync_service.is_sync_cancelling(city),
-        last_run=SyncRunOut(**last_run) if last_run else None,
+        rooms=_category_config_out(city, config, sync_service.CATEGORY_ROOM),
+        apartments=_category_config_out(city, config, sync_service.CATEGORY_APARTMENT),
     )
 
 
@@ -87,6 +95,7 @@ def update_city(city: str, payload: CityConfigUpdateIn) -> CityConfigOut:
     try:
         config = sync_service.update_city_config(
             city,
+            category=payload.category,
             sync_hour=payload.sync_hour,
             sync_minute=payload.sync_minute,
             display_name=payload.display_name,
@@ -113,24 +122,33 @@ def delete_city(city: str) -> CityDeleteOut:
 
 
 @router.post("/cities/{city}/sync", response_model=CitySyncTriggerOut, status_code=202)
-def trigger_city_sync(city: str) -> CitySyncTriggerOut:
+def trigger_city_sync(
+    city: str,
+    category: Literal["room", "apartment"] = Query("room", description="Kategoria ogłoszeń do zsynchronizowania."),
+) -> CitySyncTriggerOut:
     city = city.upper()
     if sync_service.get_city_config(city) is None:
         raise HTTPException(status_code=404, detail=f"Nieznane miasto: {city}")
 
-    started = sync_service.trigger_manual_sync(city)
+    try:
+        started = sync_service.trigger_manual_sync(city, category)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     if not started:
         raise HTTPException(status_code=409, detail=f"Synchronizacja miasta {city} już trwa.")
     return CitySyncTriggerOut(status="started", city=city)
 
 
 @router.post("/cities/{city}/sync/cancel", response_model=CitySyncCancelOut)
-def cancel_city_sync(city: str) -> CitySyncCancelOut:
+def cancel_city_sync(
+    city: str,
+    category: Literal["room", "apartment"] = Query("room", description="Kategoria ogłoszeń, dla której anulować synchronizację."),
+) -> CitySyncCancelOut:
     city = city.upper()
     if sync_service.get_city_config(city) is None:
         raise HTTPException(status_code=404, detail=f"Nieznane miasto: {city}")
 
-    cancelled = sync_service.request_cancel_sync(city)
+    cancelled = sync_service.request_cancel_sync(city, category)
     if not cancelled:
         raise HTTPException(status_code=409, detail=f"Synchronizacja miasta {city} nie jest aktualnie uruchomiona.")
     return CitySyncCancelOut(status="cancelling", city=city)

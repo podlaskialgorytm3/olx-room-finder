@@ -9,6 +9,7 @@ import type {
   CitySyncCancel,
   CitySyncTrigger,
   OfferAdminList,
+  OfferCategoryKey,
   OfferDelete,
   OfferDetail,
   OffersQuery,
@@ -42,15 +43,17 @@ export function deleteCity(city: string): Promise<CityDelete> {
   });
 }
 
-export function triggerCitySync(city: string): Promise<CitySyncTrigger> {
-  return apiFetch<CitySyncTrigger>(`/api/admin/cities/${city}/sync`, {
+export function triggerCitySync(city: string, category: OfferCategoryKey = "room"): Promise<CitySyncTrigger> {
+  const qs = buildQueryString({ category });
+  return apiFetch<CitySyncTrigger>(`/api/admin/cities/${city}/sync${qs}`, {
     method: "POST",
     headers: authHeaders(),
   });
 }
 
-export function cancelCitySync(city: string): Promise<CitySyncCancel> {
-  return apiFetch<CitySyncCancel>(`/api/admin/cities/${city}/sync/cancel`, {
+export function cancelCitySync(city: string, category: OfferCategoryKey = "room"): Promise<CitySyncCancel> {
+  const qs = buildQueryString({ category });
+  return apiFetch<CitySyncCancel>(`/api/admin/cities/${city}/sync/cancel${qs}`, {
     method: "POST",
     headers: authHeaders(),
   });

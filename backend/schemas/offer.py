@@ -6,6 +6,7 @@ from pydantic import BaseModel, ConfigDict
 
 OfferStatus = Literal["pending", "approved", "rejected"]
 OfferSource = Literal["olx", "landlord"]
+OfferCategory = Literal["room", "apartment"]
 
 
 class OfferOut(BaseModel):
@@ -14,6 +15,7 @@ class OfferOut(BaseModel):
     id: str
     title: str
     city: str = "WARSZAWA"
+    category: OfferCategory = "room"
     district: Optional[str] = None
     price: Optional[float] = None
     negotiable: Optional[bool] = None

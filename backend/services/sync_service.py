@@ -67,6 +67,27 @@ LISTING_PATH_TEMPLATE = "/nieruchomosci/stancje-pokoje/{slug}/"
 OLX_LISTING_PATH_PREFIX = "/nieruchomosci/stancje-pokoje/"
 OLX_ALLOWED_HOSTS = {"olx.pl", "www.olx.pl"}
 
+# Kategorie ogłoszeń obsługiwane przez aplikację. Każde miasto może mieć
+# niezależnie skonfigurowany link OLX (i harmonogram synchronizacji) dla
+# każdej z nich - patrz kolumny `city_configs.link`/`link_apartment` i
+# `sync_hour`/`apartment_sync_hour`. Wymagany prefiks ścieżki OLX różni się
+# w zależności od kategorii (inna kategoria OLX = inny listing).
+CATEGORY_ROOM = "room"
+CATEGORY_APARTMENT = "apartment"
+CATEGORIES = (CATEGORY_ROOM, CATEGORY_APARTMENT)
+CATEGORY_LABELS = {CATEGORY_ROOM: "pokoje/stancje", CATEGORY_APARTMENT: "mieszkania"}
+CATEGORY_PATH_PREFIXES = {
+    CATEGORY_ROOM: "/nieruchomosci/stancje-pokoje/",
+    CATEGORY_APARTMENT: "/nieruchomosci/mieszkania/wynajem/",
+}
+
+
+def _normalize_category(category: Optional[str]) -> str:
+    value = (category or CATEGORY_ROOM).strip().lower()
+    if value not in CATEGORIES:
+        raise ValueError(f"Nieznana kategoria ogłoszeń: {category!r}")
+    return value
+
 # Miasta obsługiwane domyślnie przy pierwszym uruchomieniu (seed). Klucz to
 # kod miasta zapisywany w kolumnie `offers.city` / `sync_runs.city`, `slug`
 # to fragment ścieżki URL listingu OLX dla danego miasta. Od momentu
@@ -91,11 +112,14 @@ class InvalidOlxLinkError(ValueError):
     """Link podany dla miasta nie jest poprawnym listingiem OLX kategorii pokoje/stancje."""
 
 
-def validate_olx_listing_link(link: str) -> str:
-    """Waliduje, że `link` jest linkiem do listingu OLX kategorii
-    pokoje/stancje (`/nieruchomosci/stancje-pokoje/...`) i zwraca go w
-    znormalizowanej postaci (https://www.olx.pl/..., bez parametrów
+def validate_olx_listing_link(link: str, category: str = CATEGORY_ROOM) -> str:
+    """Waliduje, że `link` jest linkiem do listingu OLX odpowiedniej kategorii
+    (pokoje/stancje albo mieszkania - patrz `CATEGORY_PATH_PREFIXES`) i zwraca
+    go w znormalizowanej postaci (https://www.olx.pl/..., bez parametrów
     zapytania ani fragmentu). Rzuca `InvalidOlxLinkError` w przeciwnym razie."""
+    category = _normalize_category(category)
+    required_prefix = CATEGORY_PATH_PREFIXES[category]
+
     raw = (link or "").strip()
     if not raw:
         raise InvalidOlxLinkError("Link nie może być pusty.")
@@ -113,14 +137,14 @@ def validate_olx_listing_link(link: str) -> str:
         raise InvalidOlxLinkError("Link musi prowadzić do serwisu olx.pl (np. https://www.olx.pl/...).")
 
     path = parsed.path if parsed.path.endswith("/") else f"{parsed.path}/"
-    if not path.startswith(OLX_LISTING_PATH_PREFIX):
+    if not path.startswith(required_prefix):
         raise InvalidOlxLinkError(
-            f"Link musi prowadzić do listingu kategorii {OLX_LISTING_PATH_PREFIX} (pokoje/stancje)."
+            f"Link musi prowadzić do listingu kategorii {required_prefix} ({CATEGORY_LABELS[category]})."
         )
 
-    slug_part = path[len(OLX_LISTING_PATH_PREFIX):].strip("/")
+    slug_part = path[len(required_prefix):].strip("/")
     if not slug_part or not re.fullmatch(r"[a-z0-9-]+(/[a-z0-9-]+)*", slug_part):
-        raise InvalidOlxLinkError("Link musi zawierać poprawny fragment miasta (np. .../stancje-pokoje/krakow/).")
+        raise InvalidOlxLinkError(f"Link musi zawierać poprawny fragment miasta (np. .../{required_prefix.strip('/')}/krakow/).")
 
     return f"{BASE_URL}{path}"
 
@@ -346,28 +370,30 @@ def parse_offers(html: str) -> list[RoomOffer]:
     return offers
 
 
-def build_listing_url(city: str = DEFAULT_CITY) -> str:
+def build_listing_url(city: str = DEFAULT_CITY, category: str = CATEGORY_ROOM) -> str:
+    category = _normalize_category(category)
     config = get_city_config(city)
-    if config is None or not config.get("link"):
-        raise ValueError(f"Nieznane miasto: {city!r}")
-    return config["link"]
+    link = get_city_category_link(config, category) if config else None
+    if not link:
+        raise ValueError(f"Brak skonfigurowanego linku OLX ({CATEGORY_LABELS[category]}) dla miasta {city!r}.")
+    return link
 
 
-def build_page_url(page_number: int, city: str = DEFAULT_CITY) -> str:
-    listing_url = build_listing_url(city)
+def build_page_url(page_number: int, city: str = DEFAULT_CITY, category: str = CATEGORY_ROOM) -> str:
+    listing_url = build_listing_url(city, category)
     if page_number == 1:
         return listing_url
     return f"{listing_url}?page={page_number}"
 
 
-def fetch_all_offers(city: str = DEFAULT_CITY) -> tuple[list[RoomOffer], int]:
-    html = fetch_html(build_listing_url(city))
+def fetch_all_offers(city: str = DEFAULT_CITY, category: str = CATEGORY_ROOM) -> tuple[list[RoomOffer], int]:
+    html = fetch_html(build_listing_url(city, category))
     soup = BeautifulSoup(html, "html.parser")
     max_page = get_max_page_number(soup)
     offers = parse_offers(html)
 
     for page_number in range(2, max_page + 1):
-        page_html = fetch_html(build_page_url(page_number, city))
+        page_html = fetch_html(build_page_url(page_number, city, category))
         offers.extend(parse_offers(page_html))
 
     return offers, max_page
@@ -757,6 +783,7 @@ CREATE TABLE IF NOT EXISTS offers (
     id TEXT PRIMARY KEY,
     title TEXT NOT NULL,
     city TEXT NOT NULL DEFAULT 'WARSZAWA',
+    category TEXT NOT NULL DEFAULT 'room',      -- 'room' (pokój) | 'apartment' (mieszkanie)
     district TEXT,
     price INTEGER,
     negotiable INTEGER,
@@ -790,6 +817,7 @@ CREATE TABLE IF NOT EXISTS offer_history (
     price INTEGER,
     total_monthly_cost REAL,
     event TEXT NOT NULL,  -- 'created' | 'removed' | 'price_changed'
+    category TEXT NOT NULL DEFAULT 'room',
     recorded_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS idx_history_offer_id ON offer_history(offer_id);
@@ -801,6 +829,7 @@ CREATE INDEX IF NOT EXISTS idx_history_recorded_at ON offer_history(recorded_at)
 CREATE TABLE IF NOT EXISTS sync_runs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     city TEXT NOT NULL DEFAULT 'WARSZAWA',
+    category TEXT NOT NULL DEFAULT 'room',
     started_at TEXT NOT NULL,
     finished_at TEXT,
     offers_seen INTEGER,
@@ -809,14 +838,18 @@ CREATE TABLE IF NOT EXISTS sync_runs (
     max_page INTEGER
 );
 
--- Konfiguracja synchronizacji per-miasto (godzina/minuta codziennego
--- uruchomienia) - edytowalna z panelu administratora.
+-- Konfiguracja synchronizacji per-miasto i per-kategorię (osobny link OLX
+-- oraz godzina/minuta codziennego uruchomienia dla pokoi i dla mieszkań) -
+-- edytowalna z panelu administratora (strona zarządzania danym miastem).
 CREATE TABLE IF NOT EXISTS city_configs (
     city TEXT PRIMARY KEY,
     display_name TEXT NOT NULL,
-    link TEXT,
+    link TEXT,                             -- link OLX kategorii pokoje/stancje
     sync_hour INTEGER NOT NULL DEFAULT 2,
-    sync_minute INTEGER NOT NULL DEFAULT 0
+    sync_minute INTEGER NOT NULL DEFAULT 0,
+    link_apartment TEXT,                   -- link OLX kategorii mieszkania (opcjonalny)
+    apartment_sync_hour INTEGER NOT NULL DEFAULT 2,
+    apartment_sync_minute INTEGER NOT NULL DEFAULT 0
 );
 
 -- Konta administratorów panelu (na start jedno konto: admin/admin).
@@ -883,7 +916,7 @@ CREATE INDEX IF NOT EXISTS idx_favorites_offer_id ON favorites(offer_id);
 """
 
 OFFER_COLUMNS = [
-    "id", "title", "city", "district", "price", "negotiable", "link", "description",
+    "id", "title", "city", "category", "district", "price", "negotiable", "link", "description",
     "address", "additional_cost", "has_additional_cost", "deposit",
     "has_deposit_cost", "has_deposit", "total_monthly_cost", "photos",
 ]
@@ -921,7 +954,10 @@ def init_db() -> None:
         _migrate_add_link_to_city_configs(conn)
         _migrate_add_views_count_to_offers(conn)
         _migrate_add_landlord_columns_to_offers(conn)
+        _migrate_add_category_columns(conn)
+        _migrate_add_apartment_columns_to_city_configs(conn)
         conn.execute("CREATE INDEX IF NOT EXISTS idx_sync_runs_city ON sync_runs(city)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_offers_category ON offers(category)")
         conn.commit()
     migrate_legacy_csv_if_needed()
     ensure_city_configs()
@@ -966,6 +1002,36 @@ def _migrate_add_link_to_city_configs(conn: sqlite3.Connection) -> None:
         conn.execute("ALTER TABLE city_configs ADD COLUMN link TEXT")
 
 
+def _migrate_add_category_columns(conn: sqlite3.Connection) -> None:
+    """Migracja dla baz utworzonych przed dodaniem obsługi kategorii ogłoszeń
+    (pokoje vs. mieszkania) - kolumna `category` w `offers`, `sync_runs` i
+    `offer_history`. Istniejące rekordy (sprzed tej funkcjonalności) dotyczą
+    wyłącznie pokoi, więc dostają domyślnie `category='room'`."""
+    offers_columns = {row[1] for row in conn.execute("PRAGMA table_info(offers)").fetchall()}
+    if "category" not in offers_columns:
+        conn.execute(f"ALTER TABLE offers ADD COLUMN category TEXT NOT NULL DEFAULT '{CATEGORY_ROOM}'")
+
+    sync_runs_columns = {row[1] for row in conn.execute("PRAGMA table_info(sync_runs)").fetchall()}
+    if "category" not in sync_runs_columns:
+        conn.execute(f"ALTER TABLE sync_runs ADD COLUMN category TEXT NOT NULL DEFAULT '{CATEGORY_ROOM}'")
+
+    history_columns = {row[1] for row in conn.execute("PRAGMA table_info(offer_history)").fetchall()}
+    if "category" not in history_columns:
+        conn.execute(f"ALTER TABLE offer_history ADD COLUMN category TEXT NOT NULL DEFAULT '{CATEGORY_ROOM}'")
+
+
+def _migrate_add_apartment_columns_to_city_configs(conn: sqlite3.Connection) -> None:
+    """Migracja dla baz utworzonych przed dodaniem osobnej konfiguracji
+    (link + harmonogram) dla kategorii "mieszkania" w `city_configs`."""
+    existing_columns = {row[1] for row in conn.execute("PRAGMA table_info(city_configs)").fetchall()}
+    if "link_apartment" not in existing_columns:
+        conn.execute("ALTER TABLE city_configs ADD COLUMN link_apartment TEXT")
+    if "apartment_sync_hour" not in existing_columns:
+        conn.execute(f"ALTER TABLE city_configs ADD COLUMN apartment_sync_hour INTEGER NOT NULL DEFAULT {RUN_HOUR}")
+    if "apartment_sync_minute" not in existing_columns:
+        conn.execute(f"ALTER TABLE city_configs ADD COLUMN apartment_sync_minute INTEGER NOT NULL DEFAULT {RUN_MINUTE}")
+
+
 def ensure_city_configs() -> None:
     """Zakłada wiersz w `city_configs` dla każdego miasta z `CITIES`, jeśli
     jeszcze go tam nie ma (domyślna godzina synchronizacji: RUN_HOUR:RUN_MINUTE)."""
@@ -1005,6 +1071,34 @@ def get_city_config(city: str) -> Optional[dict[str, Any]]:
         return dict(row) if row else None
 
 
+# Nazwy kolumn `city_configs` per kategoria - "room" korzysta z historycznych
+# kolumn `link`/`sync_hour`/`sync_minute` (sprzed dodania kategorii
+# "mieszkania"), "apartment" z ich odpowiedników `*_apartment`/`apartment_*`.
+_CATEGORY_COLUMNS = {
+    CATEGORY_ROOM: {"link": "link", "sync_hour": "sync_hour", "sync_minute": "sync_minute"},
+    CATEGORY_APARTMENT: {
+        "link": "link_apartment",
+        "sync_hour": "apartment_sync_hour",
+        "sync_minute": "apartment_sync_minute",
+    },
+}
+
+
+def get_city_category_link(config: dict[str, Any], category: str = CATEGORY_ROOM) -> Optional[str]:
+    category = _normalize_category(category)
+    return config.get(_CATEGORY_COLUMNS[category]["link"])
+
+
+def get_city_category_sync_hour(config: dict[str, Any], category: str = CATEGORY_ROOM) -> int:
+    category = _normalize_category(category)
+    return config[_CATEGORY_COLUMNS[category]["sync_hour"]]
+
+
+def get_city_category_sync_minute(config: dict[str, Any], category: str = CATEGORY_ROOM) -> int:
+    category = _normalize_category(category)
+    return config[_CATEGORY_COLUMNS[category]["sync_minute"]]
+
+
 def create_city_config(
     city: str,
     display_name: str,
@@ -1012,10 +1106,12 @@ def create_city_config(
     sync_hour: int = RUN_HOUR,
     sync_minute: int = RUN_MINUTE,
 ) -> dict[str, Any]:
-    """Tworzy nowe miasto w `city_configs`. `link` musi być zwalidowany
-    wcześniej przez `validate_olx_listing_link` (rzuca `InvalidOlxLinkError`,
-    jeśli nie jest linkiem OLX kategorii pokoje/stancje)."""
-    normalized_link = validate_olx_listing_link(link)
+    """Tworzy nowe miasto w `city_configs` z linkiem kategorii pokoje/stancje
+    (link kategorii mieszkania konfiguruje się później, na stronie
+    zarządzania danym miastem). `link` musi być zwalidowany wcześniej przez
+    `validate_olx_listing_link` (rzuca `InvalidOlxLinkError`, jeśli nie jest
+    linkiem OLX kategorii pokoje/stancje)."""
+    normalized_link = validate_olx_listing_link(link, CATEGORY_ROOM)
     with closing(get_connection()) as conn:
         existing = conn.execute("SELECT 1 FROM city_configs WHERE city = ?", (city,)).fetchone()
         if existing:
@@ -1030,29 +1126,37 @@ def create_city_config(
 
 def update_city_config(
     city: str,
+    category: str = CATEGORY_ROOM,
     sync_hour: Optional[int] = None,
     sync_minute: Optional[int] = None,
     display_name: Optional[str] = None,
     link: Optional[str] = None,
 ) -> Optional[dict[str, Any]]:
-    """Aktualizuje konfigurację miasta - godzinę/minutę synchronizacji oraz,
-    opcjonalnie, nazwę wyświetlaną i link do listingu OLX. Zwraca
-    zaktualizowaną konfigurację albo None, jeśli miasto nie istnieje."""
+    """Aktualizuje konfigurację miasta dla danej kategorii ogłoszeń (pokoje
+    albo mieszkania) - godzinę/minutę synchronizacji oraz, opcjonalnie, link
+    do listingu OLX tej kategorii. `display_name` jest wspólny dla miasta
+    (niezależny od kategorii). Zwraca zaktualizowaną konfigurację albo None,
+    jeśli miasto nie istnieje."""
+    category = _normalize_category(category)
+    columns = _CATEGORY_COLUMNS[category]
     fields: list[str] = []
     values: list[Any] = []
 
     if sync_hour is not None:
-        fields.append("sync_hour = ?")
+        fields.append(f"{columns['sync_hour']} = ?")
         values.append(sync_hour)
     if sync_minute is not None:
-        fields.append("sync_minute = ?")
+        fields.append(f"{columns['sync_minute']} = ?")
         values.append(sync_minute)
     if display_name is not None:
         fields.append("display_name = ?")
         values.append(display_name)
     if link is not None:
-        fields.append("link = ?")
-        values.append(validate_olx_listing_link(link))
+        # Pusty string oznacza "wyczyść link" (np. wyłączenie synchronizacji
+        # danej kategorii dla tego miasta) - nie waliduj go jako URL OLX.
+        normalized_link = validate_olx_listing_link(link, category) if link.strip() else None
+        fields.append(f"{columns['link']} = ?")
+        values.append(normalized_link)
 
     if not fields:
         return get_city_config(city)
@@ -1123,6 +1227,7 @@ def migrate_legacy_csv_if_needed() -> None:
                     row.get("id"),
                     row.get("title", ""),
                     "WARSZAWA",
+                    CATEGORY_ROOM,
                     row.get("district", ""),
                     _to_number(row.get("price")),
                     _parse_bool(row.get("negotiable")),
@@ -1157,23 +1262,33 @@ def migrate_legacy_csv_if_needed() -> None:
         logger.info("Zmigrowano %d rekordów z %s do %s.", total, LEGACY_CSV_FILE, DB_FILE)
 
 
-def get_existing_ids(city: str = DEFAULT_CITY) -> set[str]:
+def get_existing_ids(city: str = DEFAULT_CITY, category: str = CATEGORY_ROOM) -> set[str]:
     with closing(get_connection()) as conn:
-        rows = conn.execute("SELECT id FROM offers WHERE city = ?", (city,)).fetchall()
+        rows = conn.execute(
+            "SELECT id FROM offers WHERE city = ? AND category = ?", (city, _normalize_category(category))
+        ).fetchall()
     return {row[0] for row in rows}
 
 
-def _record_history(conn: sqlite3.Connection, offer_id: str, district: Any, price: Any, total_monthly_cost: Any, event: str) -> None:
+def _record_history(
+    conn: sqlite3.Connection,
+    offer_id: str,
+    district: Any,
+    price: Any,
+    total_monthly_cost: Any,
+    event: str,
+    category: str = CATEGORY_ROOM,
+) -> None:
     conn.execute(
-        "INSERT INTO offer_history (offer_id, district, price, total_monthly_cost, event) "
-        "VALUES (?, ?, ?, ?, ?)",
-        (offer_id, district, _to_number(price), _to_number(total_monthly_cost), event),
+        "INSERT INTO offer_history (offer_id, district, price, total_monthly_cost, event, category) "
+        "VALUES (?, ?, ?, ?, ?, ?)",
+        (offer_id, district, _to_number(price), _to_number(total_monthly_cost), event, category),
     )
 
 
-def delete_offers(ids: set[str], city: str = DEFAULT_CITY) -> int:
-    """Usuwa z bazy rekordy o podanych ID (zniknęły z OLX) dla danego miasta.
-    Zwraca liczbę usuniętych wierszy.
+def delete_offers(ids: set[str], city: str = DEFAULT_CITY, category: str = CATEGORY_ROOM) -> int:
+    """Usuwa z bazy rekordy o podanych ID (zniknęły z OLX) dla danego miasta i
+    danej kategorii ogłoszeń. Zwraca liczbę usuniętych wierszy.
 
     Przed usunięciem zapisuje snapshot oferty (event='removed') do
     `offer_history` - to jedyny moment, w którym dane o znikającej ofercie
@@ -1181,30 +1296,34 @@ def delete_offers(ids: set[str], city: str = DEFAULT_CITY) -> int:
     """
     if not ids:
         return 0
+    category = _normalize_category(category)
     with closing(get_connection()) as conn:
         placeholders = ", ".join(["?"] * len(ids))
         rows_to_remove = conn.execute(
             f"SELECT id, district, price, total_monthly_cost FROM offers "
-            f"WHERE id IN ({placeholders}) AND city = ?",
-            (*ids, city),
+            f"WHERE id IN ({placeholders}) AND city = ? AND category = ?",
+            (*ids, city, category),
         ).fetchall()
         for offer_id, district, price, total_monthly_cost in rows_to_remove:
-            _record_history(conn, offer_id, district, price, total_monthly_cost, event="removed")
+            _record_history(conn, offer_id, district, price, total_monthly_cost, event="removed", category=category)
 
         cursor = conn.execute(
-            f"DELETE FROM offers WHERE id IN ({placeholders}) AND city = ?", (*ids, city)
+            f"DELETE FROM offers WHERE id IN ({placeholders}) AND city = ? AND category = ?",
+            (*ids, city, category),
         )
         conn.commit()
         return cursor.rowcount
 
 
-def insert_offer(row: dict[str, Any], city: str = DEFAULT_CITY) -> None:
+def insert_offer(row: dict[str, Any], city: str = DEFAULT_CITY, category: str = CATEGORY_ROOM) -> None:
     """Wstawia jeden nowy, kompletny rekord ogłoszenia do bazy i zapisuje
     zdarzenie 'created' w historii."""
+    category = _normalize_category(category)
     values = (
         row["id"],
         row["title"],
         city,
+        category,
         row["district"],
         _to_number(row.get("price")),
         _parse_bool(row.get("negotiable")),
@@ -1225,14 +1344,18 @@ def insert_offer(row: dict[str, Any], city: str = DEFAULT_CITY) -> None:
             f"VALUES ({', '.join(['?'] * len(OFFER_COLUMNS))}, datetime('now'))",
             values,
         )
-        _record_history(conn, row["id"], row["district"], row.get("price"), row.get("total_monthly_cost"), event="created")
+        _record_history(
+            conn, row["id"], row["district"], row.get("price"), row.get("total_monthly_cost"),
+            event="created", category=category,
+        )
         conn.commit()
 
 
-def start_sync_run(started_at: str, city: str = DEFAULT_CITY) -> int:
+def start_sync_run(started_at: str, city: str = DEFAULT_CITY, category: str = CATEGORY_ROOM) -> int:
     with closing(get_connection()) as conn:
         cursor = conn.execute(
-            "INSERT INTO sync_runs (city, started_at) VALUES (?, ?)", (city, started_at)
+            "INSERT INTO sync_runs (city, category, started_at) VALUES (?, ?, ?)",
+            (city, _normalize_category(category), started_at),
         )
         conn.commit()
         return cursor.lastrowid
@@ -1248,23 +1371,35 @@ def finish_sync_run(run_id: int, offers_seen: int, offers_added: int, offers_rem
         conn.commit()
 
 
-def count_offers(city: Optional[str] = None) -> int:
+def count_offers(city: Optional[str] = None, category: Optional[str] = None) -> int:
     with closing(get_connection()) as conn:
+        clauses: list[str] = []
+        params: list[Any] = []
         if city:
-            return conn.execute("SELECT COUNT(*) FROM offers WHERE city = ?", (city,)).fetchone()[0]
-        return conn.execute("SELECT COUNT(*) FROM offers").fetchone()[0]
+            clauses.append("city = ?")
+            params.append(city)
+        if category:
+            clauses.append("category = ?")
+            params.append(_normalize_category(category))
+        where = f" WHERE {' AND '.join(clauses)}" if clauses else ""
+        return conn.execute(f"SELECT COUNT(*) FROM offers{where}", params).fetchone()[0]
 
 
-def get_last_run(city: Optional[str] = None) -> Optional[dict[str, Any]]:
-    """Zwraca ostatni wpis z `sync_runs` (dla endpointu /api/sync/status), opcjonalnie filtrowany po mieście."""
+def get_last_run(city: Optional[str] = None, category: Optional[str] = None) -> Optional[dict[str, Any]]:
+    """Zwraca ostatni wpis z `sync_runs` (dla endpointu /api/sync/status),
+    opcjonalnie filtrowany po mieście i/lub kategorii ogłoszeń."""
     with closing(get_connection()) as conn:
         conn.row_factory = sqlite3.Row
+        clauses: list[str] = []
+        params: list[Any] = []
         if city:
-            row = conn.execute(
-                "SELECT * FROM sync_runs WHERE city = ? ORDER BY id DESC LIMIT 1", (city,)
-            ).fetchone()
-        else:
-            row = conn.execute("SELECT * FROM sync_runs ORDER BY id DESC LIMIT 1").fetchone()
+            clauses.append("city = ?")
+            params.append(city)
+        if category:
+            clauses.append("category = ?")
+            params.append(_normalize_category(category))
+        where = f" WHERE {' AND '.join(clauses)}" if clauses else ""
+        row = conn.execute(f"SELECT * FROM sync_runs{where} ORDER BY id DESC LIMIT 1", params).fetchone()
         return dict(row) if row else None
 
 
@@ -1315,35 +1450,38 @@ def build_full_row(offer: RoomOffer) -> dict[str, Any]:
 # SYNCHRONIZACJA
 # ==========================================================================
 
-def sync_once(city: str = DEFAULT_CITY, cancel_event: Optional[threading.Event] = None) -> None:
-    logger.info("Start synchronizacji z OLX (miasto=%s) -> baza %s", city, DB_FILE)
+def sync_once(city: str = DEFAULT_CITY, category: str = CATEGORY_ROOM, cancel_event: Optional[threading.Event] = None) -> None:
+    category = _normalize_category(category)
+    logger.info("Start synchronizacji z OLX (miasto=%s, kategoria=%s) -> baza %s", city, category, DB_FILE)
     init_db()
 
     run_started_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    run_id = start_sync_run(run_started_at, city)
+    run_id = start_sync_run(run_started_at, city, category)
 
     try:
-        current_offers, max_page = fetch_all_offers(city)
+        current_offers, max_page = fetch_all_offers(city, category)
     except Exception as exc:  # noqa: BLE001
-        logger.error("Nie udało się pobrać listy ogłoszeń z OLX (miasto=%s): %s", city, exc)
+        logger.error("Nie udało się pobrać listy ogłoszeń z OLX (miasto=%s, kategoria=%s): %s", city, category, exc)
         finish_sync_run(run_id, offers_seen=0, offers_added=0, offers_removed=0, max_page=0)
         return
 
     current_by_id = {offer.id: offer for offer in current_offers}
     current_ids = set(current_by_id.keys())
-    logger.info("Pobrano %d ogłoszeń z %d stron OLX (miasto=%s).", len(current_offers), max_page, city)
+    logger.info(
+        "Pobrano %d ogłoszeń z %d stron OLX (miasto=%s, kategoria=%s).", len(current_offers), max_page, city, category
+    )
 
-    existing_ids = get_existing_ids(city)
+    existing_ids = get_existing_ids(city, category)
 
     ids_to_remove = existing_ids - current_ids
     ids_to_add = current_ids - existing_ids
 
     logger.info(
-        "Do usunięcia: %d ogłoszeń, do dodania: %d ogłoszeń (miasto=%s).",
-        len(ids_to_remove), len(ids_to_add), city,
+        "Do usunięcia: %d ogłoszeń, do dodania: %d ogłoszeń (miasto=%s, kategoria=%s).",
+        len(ids_to_remove), len(ids_to_add), city, category,
     )
 
-    removed_count = delete_offers(ids_to_remove, city)
+    removed_count = delete_offers(ids_to_remove, city, category)
 
     new_ids_list = sorted(ids_to_add)
     added_count = 0
@@ -1351,14 +1489,17 @@ def sync_once(city: str = DEFAULT_CITY, cancel_event: Optional[threading.Event] 
     for index, offer_id in enumerate(new_ids_list):
         if cancel_event is not None and cancel_event.is_set():
             logger.info(
-                "Synchronizacja miasta=%s anulowana przez administratora - zapisuję %d/%d pobranych dotąd ofert.",
-                city, added_count, len(new_ids_list),
+                "Synchronizacja miasta=%s (kategoria=%s) anulowana przez administratora - zapisuję %d/%d pobranych dotąd ofert.",
+                city, category, added_count, len(new_ids_list),
             )
             cancelled = True
             break
 
         offer = current_by_id[offer_id]
-        logger.info("Pobieranie nowego ogłoszenia %d/%d (id=%s, miasto=%s)", index + 1, len(new_ids_list), offer_id, city)
+        logger.info(
+            "Pobieranie nowego ogłoszenia %d/%d (id=%s, miasto=%s, kategoria=%s)",
+            index + 1, len(new_ids_list), offer_id, city, category,
+        )
 
         if index > 0:
             time.sleep(NEW_OFFER_REQUEST_DELAY_SECONDS)
@@ -1372,12 +1513,12 @@ def sync_once(city: str = DEFAULT_CITY, cancel_event: Optional[threading.Event] 
         # Pojedynczy INSERT od razu po pobraniu - żaden nowy rekord nie ginie
         # w razie przerwania synchronizacji w połowie (ani przez anulowanie,
         # ani przez awarię), a tabela nie jest nigdy przepisywana w całości.
-        insert_offer(row, city)
+        insert_offer(row, city, category)
         added_count += 1
 
     logger.info(
-        "Zakończono synchronizację miasta=%s%s. Usunięto: %d, dodano: %d, łącznie w bazie (to miasto): %d.",
-        city, " (anulowana)" if cancelled else "", removed_count, added_count, count_offers(city),
+        "Zakończono synchronizację miasta=%s (kategoria=%s)%s. Usunięto: %d, dodano: %d, łącznie w bazie: %d.",
+        city, category, " (anulowana)" if cancelled else "", removed_count, added_count, count_offers(city, category),
     )
     finish_sync_run(
         run_id,
@@ -1392,114 +1533,146 @@ def sync_once(city: str = DEFAULT_CITY, cancel_event: Optional[threading.Event] 
 # HARMONOGRAM I ORKIESTRACJA W TLE (uruchamiane przez proces API)
 # ==========================================================================
 
-_sync_locks: dict[str, threading.Lock] = {}
+_SyncKey = tuple[str, str]  # (city, category)
+
+_sync_locks: dict[_SyncKey, threading.Lock] = {}
 _locks_guard = threading.Lock()
 _scheduler_lock = threading.Lock()
 _scheduler_started = False
 
 # Zdarzenia sygnalizujące żądanie anulowania trwającej synchronizacji danego
-# miasta (ustawiane przez `request_cancel_sync`, sprawdzane w pętli
+# miasta+kategorii (ustawiane przez `request_cancel_sync`, sprawdzane w pętli
 # `sync_once`). Trzymane osobno od `_sync_locks`, bo blokada mówi *czy*
 # synchronizacja trwa, a to zdarzenie mówi *czy ktoś poprosił o jej
 # przerwanie* - obie informacje są potrzebne niezależnie w panelu admina.
-_cancel_events: dict[str, threading.Event] = {}
+_cancel_events: dict[_SyncKey, threading.Event] = {}
 
-# Częstotliwość sprawdzania harmonogramu per-miasto (w sekundach). Sprawdzanie
-# co minutę wystarcza, bo granulacja godziny synchronizacji to godzina:minuta.
+# Częstotliwość sprawdzania harmonogramu per-miasto/kategoria (w sekundach).
+# Sprawdzanie co minutę wystarcza, bo granulacja godziny synchronizacji to
+# godzina:minuta.
 SCHEDULER_POLL_INTERVAL_SECONDS = 30
 
 
-def _get_city_lock(city: str) -> threading.Lock:
+def _get_sync_lock(city: str, category: str) -> threading.Lock:
+    key: _SyncKey = (city, category)
     with _locks_guard:
-        if city not in _sync_locks:
-            _sync_locks[city] = threading.Lock()
-        return _sync_locks[city]
+        if key not in _sync_locks:
+            _sync_locks[key] = threading.Lock()
+        return _sync_locks[key]
 
 
-def _get_cancel_event(city: str) -> threading.Event:
+def _get_cancel_event(city: str, category: str) -> threading.Event:
+    key: _SyncKey = (city, category)
     with _locks_guard:
-        if city not in _cancel_events:
-            _cancel_events[city] = threading.Event()
-        return _cancel_events[city]
+        if key not in _cancel_events:
+            _cancel_events[key] = threading.Event()
+        return _cancel_events[key]
 
 
-def is_sync_running(city: Optional[str] = None) -> bool:
-    if city:
-        return _get_city_lock(city).locked()
+def is_sync_running(city: Optional[str] = None, category: Optional[str] = None) -> bool:
+    if city and category:
+        return _get_sync_lock(city, _normalize_category(category)).locked()
     with _locks_guard:
-        return any(lock.locked() for lock in _sync_locks.values())
+        return any(
+            lock.locked()
+            for (lock_city, lock_category), lock in _sync_locks.items()
+            if (city is None or lock_city == city) and (category is None or lock_category == category)
+        )
 
 
-def is_sync_cancelling(city: str) -> bool:
-    """True, gdy dla danego miasta trwa synchronizacja, dla której poproszono
-    już o anulowanie (ale jeszcze nie zdążyła się dokończyć/zapisać)."""
-    return is_sync_running(city) and _get_cancel_event(city).is_set()
+def is_sync_cancelling(city: str, category: str = CATEGORY_ROOM) -> bool:
+    """True, gdy dla danego miasta/kategorii trwa synchronizacja, dla której
+    poproszono już o anulowanie (ale jeszcze nie zdążyła się dokończyć/zapisać)."""
+    category = _normalize_category(category)
+    return is_sync_running(city, category) and _get_cancel_event(city, category).is_set()
 
 
-def request_cancel_sync(city: str) -> bool:
-    """Sygnalizuje trwającej synchronizacji miasta, żeby przerwała pobieranie
-    kolejnych ofert po zakończeniu aktualnie przetwarzanej. Dane pobrane do
-    tego momentu są już zapisane w bazie (insert następuje od razu po każdej
-    ofercie), więc anulowanie nie traci wcześniejszego postępu.
+def request_cancel_sync(city: str, category: str = CATEGORY_ROOM) -> bool:
+    """Sygnalizuje trwającej synchronizacji miasta/kategorii, żeby przerwała
+    pobieranie kolejnych ofert po zakończeniu aktualnie przetwarzanej. Dane
+    pobrane do tego momentu są już zapisane w bazie (insert następuje od razu
+    po każdej ofercie), więc anulowanie nie traci wcześniejszego postępu.
 
-    Zwraca False, jeśli dla tego miasta nie trwa żadna synchronizacja."""
-    if not is_sync_running(city):
+    Zwraca False, jeśli dla tego miasta/kategorii nie trwa żadna synchronizacja."""
+    category = _normalize_category(category)
+    if not is_sync_running(city, category):
         return False
-    _get_cancel_event(city).set()
+    _get_cancel_event(city, category).set()
     return True
 
 
-def _run_sync_guarded(city: str = DEFAULT_CITY) -> None:
-    """Uruchamia sync_once(city) pod ochroną per-miastowej blokady, żeby
-    zaplanowana synchronizacja i ręczne wyzwolenie z API nigdy nie nachodziły
-    na siebie dla tego samego miasta (różne miasta mogą synchronizować się
-    równolegle)."""
-    lock = _get_city_lock(city)
+def _run_sync_guarded(city: str = DEFAULT_CITY, category: str = CATEGORY_ROOM) -> None:
+    """Uruchamia sync_once(city, category) pod ochroną blokady per-miasto i
+    kategorię, żeby zaplanowana synchronizacja i ręczne wyzwolenie z API
+    nigdy nie nachodziły na siebie dla tej samej pary (miasta/kategorie mogą
+    synchronizować się równolegle między sobą)."""
+    category = _normalize_category(category)
+    lock = _get_sync_lock(city, category)
     if not lock.acquire(blocking=False):
-        logger.info("Synchronizacja miasta=%s już trwa - pomijam to wywołanie.", city)
+        logger.info("Synchronizacja miasta=%s (kategoria=%s) już trwa - pomijam to wywołanie.", city, category)
         return
-    cancel_event = _get_cancel_event(city)
+    cancel_event = _get_cancel_event(city, category)
     cancel_event.clear()
     try:
-        sync_once(city, cancel_event=cancel_event)
+        sync_once(city, category, cancel_event=cancel_event)
     except Exception:  # noqa: BLE001
-        logger.exception("Niespodziewany błąd podczas synchronizacji miasta=%s.", city)
+        logger.exception("Niespodziewany błąd podczas synchronizacji miasta=%s (kategoria=%s).", city, category)
     finally:
         cancel_event.clear()
         lock.release()
 
 
-def trigger_manual_sync(city: str = DEFAULT_CITY) -> bool:
-    """Uruchamia synchronizację danego miasta natychmiast, w osobnym wątku
-    (nieblokująco).
+def trigger_manual_sync(city: str = DEFAULT_CITY, category: str = CATEGORY_ROOM) -> bool:
+    """Uruchamia synchronizację danego miasta/kategorii natychmiast, w osobnym
+    wątku (nieblokująco).
 
-    Zwraca False, jeśli synchronizacja tego miasta już trwa (nic nowego nie
-    uruchomiono), True jeśli nowa synchronizacja została wystartowana.
-    """
-    if get_city_config(city) is None:
+    Zwraca False, jeśli synchronizacja tej pary miasto/kategoria już trwa
+    (nic nowego nie uruchomiono), True jeśli nowa synchronizacja została
+    wystartowana. Rzuca ValueError, jeśli miasto nie istnieje albo nie ma
+    skonfigurowanego linku OLX dla tej kategorii."""
+    category = _normalize_category(category)
+    config = get_city_config(city)
+    if config is None:
         raise ValueError(f"Nieznane miasto: {city!r}")
-    if _get_city_lock(city).locked():
+    if not get_city_category_link(config, category):
+        raise ValueError(f"Brak skonfigurowanego linku OLX ({CATEGORY_LABELS[category]}) dla miasta {city!r}.")
+    if _get_sync_lock(city, category).locked():
         return False
-    thread = threading.Thread(target=_run_sync_guarded, args=(city,), daemon=True, name=f"olx-sync-manual-{city}")
+    thread = threading.Thread(
+        target=_run_sync_guarded, args=(city, category), daemon=True, name=f"olx-sync-manual-{city}-{category}"
+    )
     thread.start()
     return True
 
 
 def _run_forever_loop() -> None:
-    logger.info("Uruchomiono harmonogram synchronizacji (konfiguracja godzin per-miasto w tabeli city_configs).")
-    last_triggered_at: dict[str, str] = {}
+    logger.info("Uruchomiono harmonogram synchronizacji (konfiguracja godzin per-miasto/kategoria w tabeli city_configs).")
+    last_triggered_at: dict[_SyncKey, str] = {}
     while True:
         now = datetime.now()
         current_minute_key = now.strftime("%Y-%m-%d %H:%M")
         for config in get_city_configs():
             city = config["city"]
-            if now.hour == config["sync_hour"] and now.minute == config["sync_minute"]:
-                if last_triggered_at.get(city) == current_minute_key:
-                    continue
-                last_triggered_at[city] = current_minute_key
-                logger.info("Harmonogram: uruchamiam synchronizację miasta=%s (%02d:%02d).", city, config["sync_hour"], config["sync_minute"])
-                thread = threading.Thread(target=_run_sync_guarded, args=(city,), daemon=True, name=f"olx-sync-scheduled-{city}")
-                thread.start()
+            for category in CATEGORIES:
+                link = get_city_category_link(config, category)
+                if not link:
+                    continue  # kategoria nieskonfigurowana dla tego miasta - nic do zsynchronizowania
+                hour = get_city_category_sync_hour(config, category)
+                minute = get_city_category_sync_minute(config, category)
+                if now.hour == hour and now.minute == minute:
+                    key: _SyncKey = (city, category)
+                    if last_triggered_at.get(key) == current_minute_key:
+                        continue
+                    last_triggered_at[key] = current_minute_key
+                    logger.info(
+                        "Harmonogram: uruchamiam synchronizację miasta=%s (kategoria=%s, %02d:%02d).",
+                        city, category, hour, minute,
+                    )
+                    thread = threading.Thread(
+                        target=_run_sync_guarded, args=(city, category), daemon=True,
+                        name=f"olx-sync-scheduled-{city}-{category}",
+                    )
+                    thread.start()
         time.sleep(SCHEDULER_POLL_INTERVAL_SECONDS)
 
 

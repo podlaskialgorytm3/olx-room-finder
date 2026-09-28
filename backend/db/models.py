@@ -28,6 +28,7 @@ offers = Table(
     Column("id", String, primary_key=True),
     Column("title", String, nullable=False),
     Column("city", String),
+    Column("category", String, nullable=False, default="room"),  # 'room' (pokój) | 'apartment' (mieszkanie)
     Column("district", String),
     Column("price", Integer),
     Column("negotiable", Integer),  # 0/1

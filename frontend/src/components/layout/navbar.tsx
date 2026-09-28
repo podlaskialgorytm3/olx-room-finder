@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { LayoutDashboard, LogOut, UserCircle, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { CategorySelect } from "@/components/filters/category-select";
 import { cn } from "@/lib/utils";
 import { useAdminAuthHydrated, useAdminAuthStore } from "@/lib/admin-auth-store";
 import { useUserAuthHydrated, useUserAuthStore } from "@/lib/user-auth-store";
@@ -51,10 +52,12 @@ export function Navbar() {
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
         <Link href="/" className="flex items-center gap-2 font-semibold tracking-tight">
           <span className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground text-sm">
-            OLX
+            LF
           </span>
-          <span className="hidden sm:inline">OLX Room Finder</span>
+          <span className="hidden sm:inline">Living Finder</span>
         </Link>
+
+        <CategorySelect className="w-[9.5rem]" />
 
         <nav className="flex items-center gap-1">
           {NAV_LINKS.map((link) => (
