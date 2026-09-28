@@ -16,7 +16,7 @@ import { ErrorState } from "@/components/common/error-state";
 import { PaginationControls } from "@/components/offers/pagination-controls";
 import { OfferEditDialog } from "@/components/admin/offer-edit-dialog";
 import { useAdminOfferDistricts, useAdminOffers, useCityConfigs, useDeleteOffer, useUpdateOffer } from "@/hooks";
-import { formatCity, formatPln, formatTriState, truncateText } from "@/lib/format";
+import { formatArea, formatCity, formatPln, formatTriState, truncateText } from "@/lib/format";
 import { ApiError } from "@/lib/api";
 import { cn } from "cn";
 import type { OfferDetail, OffersQuery, OfferStatus, SortField } from "@/types";
@@ -249,6 +249,7 @@ export function RoomsManagementPanel() {
                     <TableHead>Tytuł</TableHead>
                     <TableHead>Miasto</TableHead>
                     <TableHead>Dzielnica</TableHead>
+                    <TableHead>Powierzchnia</TableHead>
                     {renderSortableHead("price", "Cena")}
                     {renderSortableHead("total_monthly_cost", "Koszt całkowity")}
                     <TableHead>Negocjacja</TableHead>
@@ -276,6 +277,7 @@ export function RoomsManagementPanel() {
                       </TableCell>
                       <TableCell>{formatCity(offer.city)}</TableCell>
                       <TableCell>{offer.district ?? "brak danych"}</TableCell>
+                      <TableCell>{formatArea(offer.area_m2)}</TableCell>
                       <TableCell>{formatPln(offer.price)}</TableCell>
                       <TableCell>{formatPln(offer.total_monthly_cost)}</TableCell>
                       <TableCell>
@@ -349,7 +351,7 @@ export function RoomsManagementPanel() {
                   ))}
                   {offers.data.data.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={10} className="text-center text-muted-foreground">
+                      <TableCell colSpan={11} className="text-center text-muted-foreground">
                         Brak ofert spełniających wybrane filtry.
                       </TableCell>
                     </TableRow>

@@ -53,6 +53,7 @@ interface OfferFormState {
   district: string;
   address: string;
   price: string;
+  areaM2: string;
   additionalCost: string;
   deposit: string;
   totalMonthlyCost: string;
@@ -69,6 +70,7 @@ function emptyFormState(cityDefault: string): OfferFormState {
     district: "",
     address: "",
     price: "",
+    areaM2: "",
     additionalCost: "",
     deposit: "",
     totalMonthlyCost: "",
@@ -86,6 +88,7 @@ function offerToFormState(offer: OfferDetail): OfferFormState {
     district: offer.district ?? "",
     address: offer.address ?? "",
     price: offer.price?.toString() ?? "",
+    areaM2: offer.area_m2?.toString() ?? "",
     additionalCost: offer.additional_cost?.toString() ?? "",
     deposit: offer.deposit?.toString() ?? "",
     totalMonthlyCost: offer.total_monthly_cost?.toString() ?? "",
@@ -193,6 +196,19 @@ function OfferForm({
       </div>
 
       <div className="space-y-1.5">
+        <Label htmlFor="offer-area">Powierzchnia (m²)</Label>
+        <Input
+          id="offer-area"
+          type="number"
+          min={0}
+          step={0.1}
+          placeholder="brak danych"
+          value={form.areaM2}
+          onChange={(e) => update("areaM2", e.target.value)}
+        />
+      </div>
+
+      <div className="space-y-1.5">
         <Label htmlFor="offer-total">Całkowity koszt miesięczny (opcjonalnie)</Label>
         <Input
           id="offer-total"
@@ -291,6 +307,7 @@ function CreateOfferDialog({ open, onOpenChange }: { open: boolean; onOpenChange
       district: form.district.trim() || undefined,
       address: form.address.trim() || undefined,
       price: Number(form.price),
+      area_m2: toNumberOrUndefined(form.areaM2),
       total_monthly_cost: toNumberOrUndefined(form.totalMonthlyCost),
       additional_cost: toNumberOrUndefined(form.additionalCost),
       has_additional_cost: form.additionalCost.trim() ? true : undefined,
