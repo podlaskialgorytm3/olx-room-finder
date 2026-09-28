@@ -3,12 +3,12 @@
 import type { MouseEvent } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ImageOff, MapPin, Wallet, Handshake, Heart } from "lucide-react";
+import { ImageOff, MapPin, Wallet, Handshake, Heart, Ruler } from "lucide-react";
 import { toast } from "sonner";
 import type { Offer } from "@/types";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { formatCity, formatPln, formatTriState } from "@/lib/format";
+import { formatArea, formatCity, formatPln, formatTriState } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { useFavoriteIds, useToggleFavorite } from "@/hooks";
 import { useUserAuthHydrated, useUserAuthStore } from "@/lib/user-auth-store";
@@ -102,6 +102,9 @@ export function OfferCard({ offer }: { offer: Offer }) {
         </div>
 
         <div className="mb-1 flex flex-wrap gap-1.5 text-xs">
+          <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-1 text-muted-foreground">
+            <Ruler className="size-3.5" /> {formatArea(offer.area_m2)}
+          </span>
           <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-1 text-muted-foreground">
             <Wallet className="size-3.5" /> Kaucja: {offer.has_deposit === false ? "brak" : formatPln(offer.deposit)}
           </span>

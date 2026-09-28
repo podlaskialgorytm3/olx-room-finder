@@ -1055,6 +1055,14 @@ def _migrate_add_apartment_columns_to_city_configs(conn: sqlite3.Connection) -> 
         conn.execute(f"ALTER TABLE city_configs ADD COLUMN apartment_sync_minute INTEGER NOT NULL DEFAULT {RUN_MINUTE}")
 
 
+def _migrate_add_area_m2_to_offers(conn: sqlite3.Connection) -> None:
+    """Migracja dla baz utworzonych przed dodaniem kolumny `area_m2`
+    (powierzchnia w m2, wyodrębniana przez AI z opisu ogłoszenia)."""
+    existing_columns = {row[1] for row in conn.execute("PRAGMA table_info(offers)").fetchall()}
+    if "area_m2" not in existing_columns:
+        conn.execute("ALTER TABLE offers ADD COLUMN area_m2 REAL")
+
+
 def ensure_city_configs() -> None:
     """Zakłada wiersz w `city_configs` dla każdego miasta z `CITIES`, jeśli
     jeszcze go tam nie ma (domyślna godzina synchronizacji: RUN_HOUR:RUN_MINUTE)."""
@@ -1254,6 +1262,7 @@ def migrate_legacy_csv_if_needed() -> None:
                     CATEGORY_ROOM,
                     row.get("district", ""),
                     _to_number(row.get("price")),
+                    _to_number(row.get("area_m2")),
                     _parse_bool(row.get("negotiable")),
                     row.get("link", ""),
                     row.get("description", ""),
@@ -1350,6 +1359,7 @@ def insert_offer(row: dict[str, Any], city: str = DEFAULT_CITY, category: str = 
         category,
         row["district"],
         _to_number(row.get("price")),
+        _to_number(row.get("area_m2")),
         _parse_bool(row.get("negotiable")),
         row.get("link", ""),
         row.get("description", ""),

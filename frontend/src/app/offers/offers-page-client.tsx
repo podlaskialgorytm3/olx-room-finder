@@ -19,7 +19,8 @@ import { useOffers } from "@/hooks";
 import { useSelectedCity, DEFAULT_CITY } from "@/lib/city-store";
 import { useSelectedCategory } from "@/lib/category-store";
 import { parseOffersQuery, offersQueryToParams } from "@/lib/url-filters";
-import { PRICE_RANGE, TOTAL_COST_RANGE } from "@/lib/constants";
+import { PRICE_RANGE, TOTAL_COST_RANGE, AREA_RANGE } from "@/lib/constants";
+import { formatArea } from "@/lib/format";
 import type { OffersQuery, SortField, SortOrder } from "@/types";
 
 const CATEGORY_HEADINGS: Record<"room" | "apartment", string> = {
@@ -103,6 +104,16 @@ export function OffersPageClient() {
                 onChange={([minTotalMonthlyCost, maxTotalMonthlyCost]) =>
                   updateQuery({ minTotalMonthlyCost, maxTotalMonthlyCost })
                 }
+              />
+
+              <RangeSliderField
+                label="Powierzchnia"
+                min={AREA_RANGE.min}
+                max={AREA_RANGE.max}
+                step={AREA_RANGE.step}
+                value={[query.minAreaM2, query.maxAreaM2]}
+                onChange={([minAreaM2, maxAreaM2]) => updateQuery({ minAreaM2, maxAreaM2 })}
+                formatValue={formatArea}
               />
 
               <TriStateSelect

@@ -24,6 +24,7 @@ export type WarsawDistrict = (typeof WARSAW_DISTRICTS)[number];
 
 export const PRICE_RANGE = { min: 0, max: 5000, step: 50 } as const;
 export const TOTAL_COST_RANGE = { min: 0, max: 6000, step: 50 } as const;
+export const AREA_RANGE = { min: 0, max: 150, step: 1 } as const;
 
 export type MapMetric = "count" | "avg_price" | "median_price" | "avg_total_cost" | "median_total_cost";
 

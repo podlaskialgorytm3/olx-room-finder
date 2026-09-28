@@ -18,6 +18,12 @@ export function formatNumber(value: number | null | undefined): string {
   return numberFormatter.format(value);
 }
 
+/** Powierzchnia w m² - dopuszcza wartości z częścią dziesiętną (np. 12.5). */
+export function formatArea(value: number | null | undefined): string {
+  if (value === null || value === undefined || Number.isNaN(value)) return "brak danych";
+  return `${numberFormatter.format(value)} m²`;
+}
+
 export function formatPercent(value: number | null | undefined, digits = 1): string {
   if (value === null || value === undefined || Number.isNaN(value)) return "brak danych";
   return `${value > 0 ? "+" : ""}${value.toFixed(digits)}%`;

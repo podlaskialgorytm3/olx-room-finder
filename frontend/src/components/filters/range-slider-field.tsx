@@ -12,9 +12,11 @@ interface RangeSliderFieldProps {
   step?: number;
   value: [number | undefined, number | undefined];
   onChange: (value: [number | undefined, number | undefined]) => void;
+  /** Formatter for the displayed range values - defaults to PLN currency. */
+  formatValue?: (value: number) => string;
 }
 
-export function RangeSliderField({ label, min, max, step = 50, value, onChange }: RangeSliderFieldProps) {
+export function RangeSliderField({ label, min, max, step = 50, value, onChange, formatValue = formatPln }: RangeSliderFieldProps) {
   const resolved: [number, number] = [value[0] ?? min, value[1] ?? max];
   const [local, setLocal] = useState<[number, number]>(resolved);
   const [synced, setSynced] = useState<[number, number]>(resolved);
@@ -31,7 +33,7 @@ export function RangeSliderField({ label, min, max, step = 50, value, onChange }
       <div className="flex items-center justify-between">
         <Label className="text-sm font-medium">{label}</Label>
         <span className="text-xs text-muted-foreground">
-          {formatPln(local[0])} — {formatPln(local[1])}
+          {formatValue(local[0])} — {formatValue(local[1])}
         </span>
       </div>
       <Slider

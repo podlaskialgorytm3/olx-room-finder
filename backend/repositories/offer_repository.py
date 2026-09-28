@@ -31,6 +31,8 @@ class OfferFilters:
     district: Optional[str] = None
     min_price: Optional[float] = None
     max_price: Optional[float] = None
+    min_area_m2: Optional[float] = None
+    max_area_m2: Optional[float] = None
     min_total_monthly_cost: Optional[float] = None
     max_total_monthly_cost: Optional[float] = None
     negotiable: Optional[bool] = None
@@ -63,6 +65,10 @@ def _apply_filters(stmt: Select, filters: OfferFilters) -> Select:
         stmt = stmt.where(offers.c.price >= filters.min_price)
     if filters.max_price is not None:
         stmt = stmt.where(offers.c.price <= filters.max_price)
+    if filters.min_area_m2 is not None:
+        stmt = stmt.where(offers.c.area_m2 >= filters.min_area_m2)
+    if filters.max_area_m2 is not None:
+        stmt = stmt.where(offers.c.area_m2 <= filters.max_area_m2)
     if filters.min_total_monthly_cost is not None:
         stmt = stmt.where(offers.c.total_monthly_cost >= filters.min_total_monthly_cost)
     if filters.max_total_monthly_cost is not None:

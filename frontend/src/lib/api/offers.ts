@@ -8,6 +8,8 @@ function filtersToQuery(filters: OfferFilters): Record<string, unknown> {
     district: filters.district,
     minPrice: filters.minPrice,
     maxPrice: filters.maxPrice,
+    minAreaM2: filters.minAreaM2,
+    maxAreaM2: filters.maxAreaM2,
     minTotalMonthlyCost: filters.minTotalMonthlyCost,
     maxTotalMonthlyCost: filters.maxTotalMonthlyCost,
     negotiable: filters.negotiable,

@@ -8,6 +8,7 @@ export interface LandlordOfferCreate {
   city: string;
   district?: string | null;
   price: number;
+  area_m2?: number | null;
   negotiable?: boolean | null;
   description?: string | null;
   address?: string | null;
@@ -27,6 +28,7 @@ export interface LandlordOfferUpdate {
   city?: string;
   district?: string | null;
   price?: number;
+  area_m2?: number | null;
   negotiable?: boolean | null;
   description?: string | null;
   address?: string | null;

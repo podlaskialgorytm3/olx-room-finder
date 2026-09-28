@@ -24,6 +24,7 @@ class LandlordOfferCreateIn(BaseModel):
     category: OfferCategory = Field(default="room", description="Kategoria ogłoszenia: pokój albo mieszkanie.")
     district: Optional[str] = None
     price: float = Field(ge=0, description="Cena podstawowa (bez dodatkowych opłat).")
+    area_m2: Optional[float] = Field(default=None, ge=0, description="Powierzchnia w m2 (może mieć część dziesiętną).")
     negotiable: Optional[bool] = None
     description: Optional[str] = None
     address: Optional[str] = None
@@ -67,6 +68,7 @@ class LandlordOfferUpdateIn(BaseModel):
     category: Optional[OfferCategory] = Field(default=None, description="Kategoria ogłoszenia: pokój albo mieszkanie.")
     district: Optional[str] = None
     price: Optional[float] = Field(default=None, ge=0)
+    area_m2: Optional[float] = Field(default=None, ge=0, description="Powierzchnia w m2 (może mieć część dziesiętną).")
     negotiable: Optional[bool] = None
     description: Optional[str] = None
     address: Optional[str] = None

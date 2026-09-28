@@ -14,7 +14,7 @@ import { Separator } from "@/components/ui/separator";
 import { ErrorState } from "@/components/common/error-state";
 import { PhotoLightbox } from "@/components/offers/photo-lightbox";
 import { OfferEditDialog } from "@/components/admin/offer-edit-dialog";
-import { formatCity, formatPercent, formatPln, formatTriState } from "@/lib/format";
+import { formatCity, formatPercent, formatPln, formatTriState, formatArea } from "@/lib/format";
 import { getPriceDiffColor } from "@/lib/price-diff-color";
 import { ApiError } from "@/lib/api";
 import { useUserAuthHydrated, useUserAuthStore } from "@/lib/user-auth-store";
@@ -189,6 +189,7 @@ export default function OfferDetailPage() {
 
       {/* Key facts */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <Fact label="Powierzchnia" value={formatArea(offer.area_m2)} />
         <Fact label="Kaucja" value={offer.has_deposit === false ? "Brak" : formatPln(offer.deposit)} />
         {offer.has_additional_cost !== null && offer.has_additional_cost !== undefined && (
           <Fact label="Dodatkowe opłaty" value={offer.has_additional_cost === false ? "Brak" : formatPln(offer.additional_cost)} />

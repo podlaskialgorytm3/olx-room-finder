@@ -18,6 +18,7 @@ class OfferOut(BaseModel):
     category: OfferCategory = "room"
     district: Optional[str] = None
     price: Optional[float] = None
+    area_m2: Optional[float] = None
     negotiable: Optional[bool] = None
     link: Optional[str] = None
     address: Optional[str] = None

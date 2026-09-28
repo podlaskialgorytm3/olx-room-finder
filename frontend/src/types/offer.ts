@@ -16,6 +16,7 @@ export interface Offer {
   category: OfferCategory;
   district: string | null;
   price: number | null;
+  area_m2: number | null;
   negotiable: boolean | null;
   link: string | null;
   address: string | null;
@@ -64,6 +65,8 @@ export interface OfferFilters {
   district?: string;
   minPrice?: number;
   maxPrice?: number;
+  minAreaM2?: number;
+  maxAreaM2?: number;
   minTotalMonthlyCost?: number;
   maxTotalMonthlyCost?: number;
   negotiable?: boolean;
@@ -92,6 +95,7 @@ export interface OfferUpdate {
   category?: OfferCategory;
   district?: string | null;
   price?: number | null;
+  area_m2?: number | null;
   negotiable?: boolean | null;
   link?: string | null;
   description?: string | null;
