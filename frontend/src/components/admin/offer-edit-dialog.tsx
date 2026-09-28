@@ -81,6 +81,7 @@ function OfferEditForm({
   const [address, setAddress] = useState(offer.address ?? "");
   const [link, setLink] = useState(offer.link ?? "");
   const [price, setPrice] = useState(offer.price?.toString() ?? "");
+  const [areaM2, setAreaM2] = useState(offer.area_m2?.toString() ?? "");
   const [additionalCost, setAdditionalCost] = useState(offer.additional_cost?.toString() ?? "");
   const [deposit, setDeposit] = useState(offer.deposit?.toString() ?? "");
   const [totalMonthlyCost, setTotalMonthlyCost] = useState(offer.total_monthly_cost?.toString() ?? "");
@@ -117,6 +118,7 @@ function OfferEditForm({
       link: link.trim() || null,
       description: description.trim() || null,
       price: toNumberOrNull(price),
+      area_m2: toNumberOrNull(areaM2),
       additional_cost: toNumberOrNull(additionalCost),
       deposit: toNumberOrNull(deposit),
       total_monthly_cost: toNumberOrNull(totalMonthlyCost),
@@ -165,6 +167,18 @@ function OfferEditForm({
       <div className="space-y-1.5">
         <Label htmlFor="edit-price">Cena</Label>
         <Input id="edit-price" type="number" min={0} value={price} onChange={(e) => setPrice(e.target.value)} />
+      </div>
+      <div className="space-y-1.5">
+        <Label htmlFor="edit-area">Powierzchnia (m²)</Label>
+        <Input
+          id="edit-area"
+          type="number"
+          min={0}
+          step={0.1}
+          placeholder="brak danych"
+          value={areaM2}
+          onChange={(e) => setAreaM2(e.target.value)}
+        />
       </div>
       <div className="space-y-1.5">
         <Label htmlFor="edit-total">Całkowity koszt miesięczny</Label>
