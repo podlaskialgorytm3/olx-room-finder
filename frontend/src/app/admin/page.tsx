@@ -79,38 +79,23 @@ function AddCityForm() {
   const createCity = useCreateCity();
   const [city, setCity] = useState("");
   const [displayName, setDisplayName] = useState("");
-  const [link, setLink] = useState("");
-  const [hour, setHour] = useState(2);
-  const [minute, setMinute] = useState(0);
 
   const resetForm = () => {
     setCity("");
     setDisplayName("");
-    setLink("");
-    setHour(2);
-    setMinute(0);
   };
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
 
-    const trimmedLink = link.trim();
-    if (!/^(https?:\/\/)?(www\.)?olx\.pl\/nieruchomosci\/stancje-pokoje\//i.test(trimmedLink)) {
-      toast.error("Link musi prowadzić do listingu OLX kategorii pokoje/stancje (np. https://www.olx.pl/nieruchomosci/stancje-pokoje/lublin/).");
-      return;
-    }
-
     createCity.mutate(
       {
         city: city.trim().toUpperCase(),
         display_name: displayName.trim(),
-        link: trimmedLink,
-        sync_hour: hour,
-        sync_minute: minute,
       },
       {
         onSuccess: () => {
-          toast.success(`Dodano miasto ${displayName}.`);
+          toast.success(`Dodano miasto ${displayName}. Ustaw linki OLX i harmonogram na jego stronie zarządzania.`);
           resetForm();
         },
         onError: (err) => {
@@ -121,8 +106,8 @@ function AddCityForm() {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
-      <div className="space-y-1.5">
+    <form onSubmit={handleSubmit} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="space-y-1.5 lg:col-span-2">
         <Label htmlFor="city-code">Kod miasta</Label>
         <Input
           id="city-code"
@@ -142,40 +127,8 @@ function AddCityForm() {
           required
         />
       </div>
-      <div className="space-y-1.5 sm:col-span-2 lg:col-span-2">
-        <Label htmlFor="city-link">Link do listingu OLX</Label>
-        <Input
-          id="city-link"
-          placeholder="https://www.olx.pl/nieruchomosci/stancje-pokoje/lublin/"
-          value={link}
-          onChange={(e) => setLink(e.target.value)}
-          required
-        />
-      </div>
-      <div className="space-y-1.5">
-        <Label>Godzina synchronizacji</Label>
-        <div className="flex items-center gap-1.5">
-          <Input
-            type="number"
-            min={0}
-            max={23}
-            value={hour}
-            onChange={(e) => setHour(Number(e.target.value))}
-            className="w-16"
-          />
-          <span className="text-muted-foreground">:</span>
-          <Input
-            type="number"
-            min={0}
-            max={59}
-            value={minute}
-            onChange={(e) => setMinute(Number(e.target.value))}
-            className="w-16"
-          />
-        </div>
-      </div>
-      <div className="flex items-end sm:col-span-2 lg:col-span-6">
-        <Button type="submit" disabled={createCity.isPending}>
+      <div className="flex items-end sm:col-span-2 lg:col-span-1">
+        <Button type="submit" disabled={createCity.isPending} className="w-full">
           <Plus className="size-3.5" />
           Dodaj miasto
         </Button>
@@ -233,8 +186,8 @@ export default function AdminDashboardPage() {
             <CardHeader>
               <CardTitle>Dodaj miasto</CardTitle>
               <CardDescription>
-                Podaj link do listingu OLX kategorii pokoje/stancje dla nowego miasta (np.{" "}
-                <code>https://www.olx.pl/nieruchomosci/stancje-pokoje/lublin/</code>). Inne linki zostaną odrzucone.
+                Podaj tylko kod i nazwę miasta. Linki do listingów OLX (osobno dla pokoi i mieszkań) oraz
+                harmonogram synchronizacji ustawisz później, na stronie zarządzania danym miastem.
               </CardDescription>
             </CardHeader>
             <CardContent>

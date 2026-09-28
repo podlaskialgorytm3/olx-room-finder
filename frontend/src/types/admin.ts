@@ -25,9 +25,6 @@ export interface CityConfig {
 export interface CityConfigCreate {
   city: string;
   display_name: string;
-  link: string;
-  sync_hour?: number;
-  sync_minute?: number;
 }
 
 export interface CityConfigUpdate {
