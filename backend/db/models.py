@@ -31,6 +31,7 @@ offers = Table(
     Column("category", String, nullable=False, default="room"),  # 'room' (pokój) | 'apartment' (mieszkanie)
     Column("district", String),
     Column("price", Integer),
+    Column("area_m2", Float),  # powierzchnia w m2 (może mieć miejsca po przecinku)
     Column("negotiable", Integer),  # 0/1
     Column("link", String),
     Column("description", Text),

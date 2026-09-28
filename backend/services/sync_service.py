@@ -188,6 +188,7 @@ REQUIRED_MODEL_FIELDS = [
     "deposit",
     "has_deposit_cost",
     "has_deposit",
+    "area_m2",
 ]
 
 # Opóźnienie między przetwarzaniem kolejnych NOWYCH ofert w trakcie jednej synchronizacji.
@@ -416,6 +417,7 @@ Twoim zadaniem jest wyodrębnienie:
 4. deposit
 5. has_deposit_cost
 6. has_deposit
+7. area_m2
 
 ### ADDRESS
 
@@ -517,6 +519,24 @@ false — jeżeli ogłoszenie wyraźnie mówi, że kaucji nie ma.
 
 null — jeżeli ogłoszenie w ogóle nie zawiera informacji o kaucji.
 
+### AREA_M2
+
+Znajdź powierzchnię (metraż) pokoju lub mieszkania będącego przedmiotem ogłoszenia, wyrażoną w metrach kwadratowych.
+
+Szukaj sformułowań typu "powierzchnia", "metraż", "m2", "m²", "mkw".
+
+Zwróć liczbę (może mieć część dziesiętną, np. 12.5) - zamień przecinek dziesiętny na kropkę.
+
+Przykład: "Powierzchnia pokoju: 14 m2" → area_m2 = 14
+
+Przykład: "Metraż: 12,5 m²" → area_m2 = 12.5
+
+Jeżeli ogłoszenie podaje zarówno metraż pokoju, jak i całego mieszkania, wybierz metraż tego, co jest przedmiotem ogłoszenia (zwykle pokój w kategorii "pokoje", całe mieszkanie w kategorii "mieszkania"). Jeśli nie da się jednoznacznie rozstrzygnąć, użyj mniejszej wartości (metraż samego pokoju).
+
+Nie zgaduj metrażu na podstawie liczby pokoi, ceny czy innych pośrednich informacji.
+
+Jeżeli powierzchnia nie jest podana → null.
+
 ### ZASADY
 
 Nigdy nie wymyślaj informacji.
@@ -561,27 +581,27 @@ Jeżeli ogłoszenie podaje najpierw cenę podstawową (czynsz) osobno, a potem k
 
 Przykład 1.
 Cena podstawowa: 1250
-Fragment opisu: "Czynsz 1 250 Pln + ryczałt media 350 Pln razem 1 600 PLN / kaucja 1 600 Pln"
+Fragment opisu: "Czynsz 1 250 Pln + ryczałt media 350 Pln razem 1 600 PLN / kaucja 1 600 Pln / powierzchnia 14 m2"
 Wynik:
-{"address": null, "additional_cost": 350, "has_additional_cost": true, "deposit": 1600, "has_deposit_cost": true, "has_deposit": true}
+{"address": null, "additional_cost": 350, "has_additional_cost": true, "deposit": 1600, "has_deposit_cost": true, "has_deposit": true, "area_m2": 14}
 
 Przykład 2.
 Cena podstawowa: 1800
 Fragment opisu: "Cena 1800 zł + media wg zużycia. Kaucja do ustalenia."
 Wynik:
-{"address": null, "additional_cost": null, "has_additional_cost": true, "deposit": null, "has_deposit_cost": null, "has_deposit": true}
+{"address": null, "additional_cost": null, "has_additional_cost": true, "deposit": null, "has_deposit_cost": null, "has_deposit": true, "area_m2": null}
 
 Przykład 3.
 Cena podstawowa: 1750
-Fragment opisu: "1750 zł, wszystkie opłaty wliczone w cenę. Mieszkanie przy ul. Puławskiej 12. Bez kaucji."
+Fragment opisu: "1750 zł, wszystkie opłaty wliczone w cenę. Mieszkanie przy ul. Puławskiej 12, 45,5 m². Bez kaucji."
 Wynik:
-{"address": "ul. Puławska 12", "additional_cost": 0, "has_additional_cost": false, "deposit": null, "has_deposit_cost": false, "has_deposit": false}
+{"address": "ul. Puławska 12", "additional_cost": 0, "has_additional_cost": false, "deposit": null, "has_deposit_cost": false, "has_deposit": false, "area_m2": 45.5}
 
 Przykład 4.
 Cena podstawowa: 1400
 Fragment opisu: "Pokój na Mokotowie blisko metra Wilanowska. Cena 1400 zł + internet 40 zł + prąd wg zużycia. Kaucja w wysokości jednomiesięcznego czynszu."
 Wynik:
-{"address": null, "additional_cost": 40, "has_additional_cost": true, "deposit": null, "has_deposit_cost": null, "has_deposit": true}
+{"address": null, "additional_cost": 40, "has_additional_cost": true, "deposit": null, "has_deposit_cost": null, "has_deposit": true, "area_m2": null}
 
 Zwróć uwagę, że w przykładzie 4 "Mokotów" i "metro Wilanowska" NIE są adresem (to dzielnica/przystanek), dlatego address = null.
 
@@ -595,7 +615,8 @@ Zwróć WYŁĄCZNIE poprawny JSON:
 "has_additional_cost": null,
 "deposit": null,
 "has_deposit_cost": null,
-"has_deposit": null
+"has_deposit": null,
+"area_m2": null
 }
 
 Nie dodawaj żadnego tekstu przed JSON-em ani po JSON-ie."""
@@ -786,6 +807,7 @@ CREATE TABLE IF NOT EXISTS offers (
     category TEXT NOT NULL DEFAULT 'room',      -- 'room' (pokój) | 'apartment' (mieszkanie)
     district TEXT,
     price INTEGER,
+    area_m2 REAL,
     negotiable INTEGER,
     link TEXT,
     description TEXT,
@@ -916,7 +938,7 @@ CREATE INDEX IF NOT EXISTS idx_favorites_offer_id ON favorites(offer_id);
 """
 
 OFFER_COLUMNS = [
-    "id", "title", "city", "category", "district", "price", "negotiable", "link", "description",
+    "id", "title", "city", "category", "district", "price", "area_m2", "negotiable", "link", "description",
     "address", "additional_cost", "has_additional_cost", "deposit",
     "has_deposit_cost", "has_deposit", "total_monthly_cost", "photos",
 ]
@@ -956,6 +978,7 @@ def init_db() -> None:
         _migrate_add_landlord_columns_to_offers(conn)
         _migrate_add_category_columns(conn)
         _migrate_add_apartment_columns_to_city_configs(conn)
+        _migrate_add_area_m2_to_offers(conn)
         conn.execute("CREATE INDEX IF NOT EXISTS idx_sync_runs_city ON sync_runs(city)")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_offers_category ON offers(category)")
         conn.commit()
