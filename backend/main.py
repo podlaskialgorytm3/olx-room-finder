@@ -18,7 +18,21 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend.config import ENABLE_SYNC_SCHEDULER
-from backend.routers import admin, admin_users, analysis, auth, cities, favorites, landlord, offers, statistics, sync, users
+from backend.routers import (
+    admin,
+    admin_users,
+    analysis,
+    auth,
+    cities,
+    favorites,
+    landlord,
+    notifications,
+    offers,
+    saved_searches,
+    statistics,
+    sync,
+    users,
+)
 from backend.services import auth_service, sync_service
 
 
@@ -59,6 +73,8 @@ app.include_router(users.router)
 app.include_router(landlord.router)
 app.include_router(cities.router)
 app.include_router(favorites.router)
+app.include_router(saved_searches.router)
+app.include_router(notifications.router)
 
 
 @app.get("/api/health", tags=["health"])
