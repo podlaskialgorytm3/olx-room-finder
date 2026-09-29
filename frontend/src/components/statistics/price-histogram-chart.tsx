@@ -6,7 +6,7 @@ import { usePriceDistribution } from "@/hooks";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/common/empty-state";
 import { ErrorState } from "@/components/common/error-state";
-import { formatPln } from "@/lib/format";
+import { formatNumber } from "@/lib/format";
 
 const BIN_SIZE = 100;
 
@@ -18,8 +18,11 @@ export function PriceHistogramChart() {
   if (isError) return <ErrorState onRetry={() => refetch()} description="Nie udało się pobrać rozkładu kosztu całkowitego." />;
   if (!data || data.length === 0) return <EmptyState title="Brak danych" description="Brak danych do zbudowania histogramu kosztu całkowitego." />;
 
+  // Przedziały histogramu są półotwarte [from, to) - żeby jedna oferta nie
+  // pojawiała się w dwóch sąsiednich przedziałach, górną granicę pokazujemy
+  // jako `to - 1` (np. 700-799 zł, potem 800-899 zł).
   const chartData = data.map((bucket) => ({
-    range: `${formatPln(bucket.from)}`,
+    range: `${formatNumber(bucket.from)}-${formatNumber(bucket.to - 1)} zł`,
     count: bucket.count,
     from: bucket.from,
     to: bucket.to,
