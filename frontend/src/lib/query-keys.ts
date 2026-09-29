@@ -32,4 +32,9 @@ export const queryKeys = {
   landlordOffer: (id: string) => ["landlord", "offer", id] as const,
   favoriteIds: () => ["favorites", "ids"] as const,
   favorites: (page: number, limit: number) => ["favorites", "list", page, limit] as const,
+  savedSearches: () => ["saved-searches", "list"] as const,
+  savedSearch: (id: number) => ["saved-searches", "detail", id] as const,
+  savedSearchMatches: (id: number) => ["saved-searches", "matches", id] as const,
+  notifications: (unreadOnly: boolean, page: number, limit: number) =>
+    ["notifications", "list", unreadOnly, page, limit] as const,
 };
