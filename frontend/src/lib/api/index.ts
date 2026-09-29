@@ -8,3 +8,5 @@ export * as citiesApi from "./cities";
 export * as usersApi from "./users";
 export * as landlordApi from "./landlord";
 export * as favoritesApi from "./favorites";
+export * as savedSearchesApi from "./saved-searches";
+export * as notificationsApi from "./notifications";

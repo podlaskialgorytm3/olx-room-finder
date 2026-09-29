@@ -8,3 +8,5 @@ export * from "./city";
 export * from "./user";
 export * from "./landlord";
 export * from "./favorite";
+export * from "./saved-search";
+export * from "./notification";
