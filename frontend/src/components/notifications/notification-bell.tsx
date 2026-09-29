@@ -24,7 +24,7 @@ const TYPE_ICON: Record<AppNotification["type"], string> = {
   OFFER_REMOVED: "🗑️",
 };
 
-function NotificationRow({ notification }: { notification: AppNotification }) {
+export function NotificationRow({ notification }: { notification: AppNotification }) {
   const markRead = useMarkNotificationRead();
 
   const handleClick = () => {
