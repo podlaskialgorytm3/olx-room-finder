@@ -31,10 +31,13 @@ export function PriceHistogramChart() {
   const handleBarClick = (bucket: { from: number; to: number }) => {
     // Klik w słupek przenosi do wyszukiwarki ofert z całej Warszawy (bez
     // filtra dzielnicy) zawężonej do tego jednego przedziału całkowitego
-    // kosztu miesięcznego.
+    // kosztu miesięcznego. Przedział histogramu jest półotwarty [from, to),
+    // a filtr na liście ofert jest domknięty (<=), więc górną granicę
+    // zawężamy o 0.01, żeby oferta z granicy (np. `to` = 800) nie trafiała
+    // jednocześnie do tego i sąsiedniego przedziału.
     const params = new URLSearchParams({
       minTotalMonthlyCost: String(bucket.from),
-      maxTotalMonthlyCost: String(bucket.to),
+      maxTotalMonthlyCost: String(bucket.to - 0.01),
     });
     router.push(`/offers?${params.toString()}`);
   };
