@@ -97,70 +97,64 @@ function EditAlertForm({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Edytuj alert</DialogTitle>
-        </DialogHeader>
-
-        <div className="space-y-4">
-          <div className="space-y-1.5">
-            <Label htmlFor="edit-alert-name">Nazwa alertu</Label>
-            <Input id="edit-alert-name" value={name} onChange={(e) => setName(e.target.value)} />
-          </div>
-
-          <div className="space-y-1.5">
-            <Label>Dzielnica</Label>
-            <DistrictSelect value={district} onChange={setDistrict} className="w-full" />
-          </div>
-
-          <RangeSliderField
-            label="Cena"
-            min={PRICE_RANGE.min}
-            max={PRICE_RANGE.max}
-            step={PRICE_RANGE.step}
-            value={[minPrice, maxPrice]}
-            onChange={([min, max]) => {
-              setMinPrice(min);
-              setMaxPrice(max);
-            }}
-          />
-
-          <RangeSliderField
-            label="Powierzchnia"
-            min={AREA_RANGE.min}
-            max={AREA_RANGE.max}
-            step={AREA_RANGE.step}
-            value={[minArea, maxArea]}
-            onChange={([min, max]) => {
-              setMinArea(min);
-              setMaxArea(max);
-            }}
-            formatValue={formatArea}
-          />
-
-          <div className="space-y-2">
-            <Label>Powiadomienia</Label>
-            <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
-              <span className="text-sm">Nowe pasujące oferty</span>
-              <Switch checked={notifyNewOffers} onCheckedChange={setNotifyNewOffers} />
-            </div>
-            <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
-              <span className="text-sm">Spadki cen</span>
-              <Switch checked={notifyPriceDrops} onCheckedChange={setNotifyPriceDrops} />
-            </div>
-          </div>
+    <>
+      <div className="space-y-4">
+        <div className="space-y-1.5">
+          <Label htmlFor="edit-alert-name">Nazwa alertu</Label>
+          <Input id="edit-alert-name" value={name} onChange={(e) => setName(e.target.value)} />
         </div>
 
-        <DialogFooter>
-          <DialogClose asChild>
-            <Button variant="outline">Anuluj</Button>
-          </DialogClose>
-          <Button onClick={handleSave} disabled={updateSavedSearch.isPending}>
-            Zapisz zmiany
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        <div className="space-y-1.5">
+          <Label>Dzielnica</Label>
+          <DistrictSelect value={district} onChange={setDistrict} className="w-full" />
+        </div>
+
+        <RangeSliderField
+          label="Cena"
+          min={PRICE_RANGE.min}
+          max={PRICE_RANGE.max}
+          step={PRICE_RANGE.step}
+          value={[minPrice, maxPrice]}
+          onChange={([min, max]) => {
+            setMinPrice(min);
+            setMaxPrice(max);
+          }}
+        />
+
+        <RangeSliderField
+          label="Powierzchnia"
+          min={AREA_RANGE.min}
+          max={AREA_RANGE.max}
+          step={AREA_RANGE.step}
+          value={[minArea, maxArea]}
+          onChange={([min, max]) => {
+            setMinArea(min);
+            setMaxArea(max);
+          }}
+          formatValue={formatArea}
+        />
+
+        <div className="space-y-2">
+          <Label>Powiadomienia</Label>
+          <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
+            <span className="text-sm">Nowe pasujące oferty</span>
+            <Switch checked={notifyNewOffers} onCheckedChange={setNotifyNewOffers} />
+          </div>
+          <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
+            <span className="text-sm">Spadki cen</span>
+            <Switch checked={notifyPriceDrops} onCheckedChange={setNotifyPriceDrops} />
+          </div>
+        </div>
+      </div>
+
+      <DialogFooter>
+        <DialogClose asChild>
+          <Button variant="outline">Anuluj</Button>
+        </DialogClose>
+        <Button onClick={handleSave} disabled={updateSavedSearch.isPending}>
+          Zapisz zmiany
+        </Button>
+      </DialogFooter>
+    </>
   );
 }
