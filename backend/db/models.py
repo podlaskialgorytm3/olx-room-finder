@@ -19,6 +19,7 @@ from sqlalchemy import (
     Table,
     Text,
 )
+from sqlalchemy import UniqueConstraint
 
 metadata = MetaData()
 
@@ -83,4 +84,41 @@ favorites = Table(
     Column("user_id", Integer, nullable=False),
     Column("offer_id", String, nullable=False),
     Column("created_at", String),
+)
+
+saved_searches = Table(
+    "saved_searches",
+    metadata,
+    Column("id", Integer, primary_key=True),
+    Column("user_id", Integer, nullable=False),
+    Column("name", String, nullable=False),
+    Column("city_id", String),
+    Column("category", String),  # 'room' | 'apartment' | NULL (dowolna)
+    Column("districts", Text),  # JSON zserializowany jako string, np. '["Mokotów"]'
+    Column("min_price", Float),
+    Column("max_price", Float),
+    Column("min_area", Float),
+    Column("max_area", Float),
+    Column("source", String),  # 'olx' | 'landlord' | NULL (dowolne)
+    Column("notification_enabled", Integer, nullable=False, default=1),  # 0/1 - status alertu
+    Column("notify_new_offers", Integer, nullable=False, default=1),
+    Column("notify_price_drops", Integer, nullable=False, default=1),
+    Column("created_at", String),
+    Column("updated_at", String),
+    Column("last_checked_at", String),
+)
+
+notifications = Table(
+    "notifications",
+    metadata,
+    Column("id", Integer, primary_key=True),
+    Column("user_id", Integer, nullable=False),
+    Column("saved_search_id", Integer),
+    Column("offer_id", String),
+    Column("type", String, nullable=False),  # 'NEW_OFFER' | 'PRICE_DROP' | 'OFFER_REMOVED'
+    Column("title", String, nullable=False),
+    Column("message", Text, nullable=False),
+    Column("is_read", Integer, nullable=False, default=0),  # 0/1
+    Column("created_at", String),
+    UniqueConstraint("saved_search_id", "offer_id", "type", name="uq_notifications_search_offer_type"),
 )

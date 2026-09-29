@@ -42,3 +42,9 @@ MIN_DISTRICT_SAMPLE_SIZE = 5
 ENABLE_SYNC_SCHEDULER = os.environ.get("ENABLE_SYNC_SCHEDULER", "true").strip().lower() in (
     "1", "true", "yes", "on",
 )
+
+# Maksymalna liczba aktywnych alertów ofertowych (`saved_searches` z
+# `notification_enabled=1`) na jednego użytkownika - patrz
+# `backend/routers/saved_searches.py`.
+MAX_ACTIVE_SAVED_SEARCHES_PER_USER = 20
+

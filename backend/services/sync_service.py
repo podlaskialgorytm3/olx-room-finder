@@ -1435,6 +1435,53 @@ def insert_offer(row: dict[str, Any], city: str = DEFAULT_CITY, category: str = 
         conn.commit()
 
 
+def get_offers_price_snapshot(ids: set[str], city: str = DEFAULT_CITY, category: str = CATEGORY_ROOM) -> dict[str, dict[str, Any]]:
+    """Zwraca `{offer_id: {price, additional_cost, area_m2, district}}` dla
+    ofert, które już są w bazie (kept - ani nowe, ani usunięte w tym
+    przebiegu synchronizacji) - używane do wykrycia zmian ceny."""
+    if not ids:
+        return {}
+    category = _normalize_category(category)
+    with closing(get_connection()) as conn:
+        placeholders = ", ".join(["?"] * len(ids))
+        rows = conn.execute(
+            f"SELECT id, price, additional_cost, area_m2, district FROM offers "
+            f"WHERE id IN ({placeholders}) AND city = ? AND category = ?",
+            (*ids, city, category),
+        ).fetchall()
+    return {
+        row[0]: {"price": row[1], "additional_cost": row[2], "area_m2": row[3], "district": row[4]}
+        for row in rows
+    }
+
+
+def update_offer_price(
+    offer_id: str, new_price: int, city: str = DEFAULT_CITY, category: str = CATEGORY_ROOM
+) -> Optional[dict[str, Any]]:
+    """Aktualizuje cenę (i przeliczony `total_monthly_cost`) istniejącej
+    oferty, wykrytą podczas synchronizacji, i zapisuje zdarzenie
+    'price_changed' w `offer_history`. Zwraca dane potrzebne do dopasowania
+    alertów cenowych (stara/nowa cena, dzielnica) albo None, jeśli oferta w
+    międzyczasie zniknęła z bazy."""
+    category = _normalize_category(category)
+    with closing(get_connection()) as conn:
+        row = conn.execute(
+            "SELECT price, additional_cost, district FROM offers WHERE id = ? AND city = ? AND category = ?",
+            (offer_id, city, category),
+        ).fetchone()
+        if row is None:
+            return None
+        old_price, additional_cost, district = row
+        new_total = calculate_total_cost(new_price, additional_cost)
+        conn.execute(
+            "UPDATE offers SET price = ?, total_monthly_cost = ?, updated_at = datetime('now') WHERE id = ?",
+            (new_price, new_total, offer_id),
+        )
+        _record_history(conn, offer_id, district, new_price, new_total, event="price_changed", category=category)
+        conn.commit()
+    return {"offer_id": offer_id, "old_price": old_price, "new_price": new_price, "district": district}
+
+
 def start_sync_run(started_at: str, city: str = DEFAULT_CITY, category: str = CATEGORY_ROOM) -> int:
     with closing(get_connection()) as conn:
         cursor = conn.execute(
@@ -1567,6 +1614,49 @@ def sync_once(city: str = DEFAULT_CITY, category: str = CATEGORY_ROOM, cancel_ev
 
     removed_count = delete_offers(ids_to_remove, city, category)
 
+    # Oferty, które pozostały w bazie (ani nowe, ani zniknięte) - sprawdzamy
+    # czy ich cena zmieniła się względem poprzedniej synchronizacji, żeby
+    # zasilić alerty "spadek ceny" (patrz `backend/services/notification_service.py`)
+    # bez osobnego procesu odpytującego OLX.
+    kept_ids = current_ids & existing_ids
+    price_snapshot = get_offers_price_snapshot(kept_ids, city, category)
+    price_drops_notified = 0
+    for offer_id, snapshot in price_snapshot.items():
+        new_offer = current_by_id.get(offer_id)
+        old_price = snapshot.get("price")
+        new_price = new_offer.price if new_offer is not None else None
+        if old_price is None or new_price is None or old_price == new_price:
+            continue
+
+        updated = update_offer_price(offer_id, new_price, city, category)
+        if updated is None:
+            continue
+
+        try:
+            from backend.services import notification_service
+
+            price_drops_notified += notification_service.process_price_drop(
+                offer_row={
+                    "id": offer_id,
+                    "district": updated["district"],
+                    "area_m2": snapshot.get("area_m2"),
+                    "price": new_price,
+                    "source": "olx",
+                },
+                old_price=old_price,
+                new_price=new_price,
+                city=city,
+                category=category,
+            )
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Nie udało się przetworzyć alertów spadku ceny dla id=%s: %s", offer_id, exc)
+
+    if price_snapshot:
+        logger.info(
+            "Sprawdzono zmiany cen %d istniejących ofert (miasto=%s, kategoria=%s), wysłano %d powiadomień o spadku ceny.",
+            len(price_snapshot), city, category, price_drops_notified,
+        )
+
     new_ids_list = sorted(ids_to_add)
     added_count = 0
     cancelled = False
@@ -1599,6 +1689,23 @@ def sync_once(city: str = DEFAULT_CITY, category: str = CATEGORY_ROOM, cancel_ev
         # ani przez awarię), a tabela nie jest nigdy przepisywana w całości.
         insert_offer(row, city, category)
         added_count += 1
+
+        try:
+            from backend.services import notification_service
+
+            notification_service.process_new_offer(
+                offer_row={
+                    "id": offer_id,
+                    "district": row.get("district"),
+                    "price": _to_number(row.get("price")),
+                    "area_m2": _to_number(row.get("area_m2")),
+                    "source": "olx",
+                },
+                city=city,
+                category=category,
+            )
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Nie udało się przetworzyć alertów nowej oferty dla id=%s: %s", offer_id, exc)
 
     logger.info(
         "Zakończono synchronizację miasta=%s (kategoria=%s)%s. Usunięto: %d, dodano: %d, łącznie w bazie: %d.",
