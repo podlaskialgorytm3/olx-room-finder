@@ -935,6 +935,56 @@ CREATE TABLE IF NOT EXISTS favorites (
 );
 CREATE INDEX IF NOT EXISTS idx_favorites_user_id ON favorites(user_id);
 CREATE INDEX IF NOT EXISTS idx_favorites_offer_id ON favorites(offer_id);
+
+-- Zapisane wyszukiwania (alerty ofertowe) - zalogowany użytkownik zapisuje
+-- kryteria filtrowania ofert (przepisane z aktualnie ustawionych filtrów na
+-- `/offers`) i dostaje powiadomienie, gdy pojawi się/zmieni pasująca oferta.
+-- `districts` trzymane jako JSON (lista nazw dzielnic) - analogicznie do
+-- `offers.photos` - bo to prosta lista bez potrzeby osobnych zapytań
+-- agregujących po dzielnicy.
+CREATE TABLE IF NOT EXISTS saved_searches (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    name TEXT NOT NULL,
+    city_id TEXT,                        -- NULL = dowolne miasto
+    category TEXT,                       -- 'room' | 'apartment' | NULL = dowolna
+    districts TEXT,                      -- JSON: lista nazw dzielnic, np. '["Mokotów"]', NULL/'[]' = dowolna
+    min_price REAL,
+    max_price REAL,
+    min_area REAL,
+    max_area REAL,
+    source TEXT,                         -- 'olx' | 'landlord' | NULL = dowolne
+    notification_enabled INTEGER NOT NULL DEFAULT 1,  -- status alertu: aktywny/wyłączony
+    notify_new_offers INTEGER NOT NULL DEFAULT 1,
+    notify_price_drops INTEGER NOT NULL DEFAULT 1,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+    last_checked_at TEXT,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_saved_searches_user_id ON saved_searches(user_id);
+
+-- Centrum powiadomień - powstają automatycznie po każdej synchronizacji OLX,
+-- gdy nowa lub przecenowana oferta pasuje do aktywnego alertu użytkownika
+-- (patrz `backend/services/notification_service.py`, wywoływane z
+-- `sync_once` poniżej). Unikalność (saved_search_id, offer_id, type)
+-- zabezpiecza przed wielokrotnym powiadomieniem o tej samej ofercie/zmianie.
+CREATE TABLE IF NOT EXISTS notifications (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    saved_search_id INTEGER,
+    offer_id TEXT,
+    type TEXT NOT NULL,                  -- 'NEW_OFFER' | 'PRICE_DROP' | 'OFFER_REMOVED'
+    title TEXT NOT NULL,
+    message TEXT NOT NULL,
+    is_read INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE(saved_search_id, offer_id, type),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (saved_search_id) REFERENCES saved_searches(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_is_read ON notifications(is_read);
 """
 
 OFFER_COLUMNS = [
