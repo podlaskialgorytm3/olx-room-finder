@@ -48,3 +48,27 @@ ENABLE_SYNC_SCHEDULER = os.environ.get("ENABLE_SYNC_SCHEDULER", "true").strip().
 # `backend/routers/saved_searches.py`.
 MAX_ACTIVE_SAVED_SEARCHES_PER_USER = 20
 
+# --- "Sprawdź dojazd" (patrz backend/services/routing_service.py) ---------
+# Adres usługi geokodowania (zamiana adresu/nazwy miejsca na lat/lng).
+# Nominatim (OpenStreetMap) - darmowe, bez klucza API.
+GEOCODING_BASE_URL = os.environ.get("GEOCODING_BASE_URL", "https://nominatim.openstreetmap.org/search")
+GEOCODING_USER_AGENT = os.environ.get("GEOCODING_USER_AGENT", "olx-room-finder/1.0 (dojazd)")
+
+# Adres publicznego serwera OSRM użytego do policzenia realnej odległości
+# drogowej między ofertą a miejscem docelowym (profil pieszy - najbliższy
+# darmowy odpowiednik tras miejskich bez potrzeby klucza API/danych GTFS).
+ROUTING_BASE_URL = os.environ.get("ROUTING_BASE_URL", "https://router.project-osrm.org/route/v1/foot")
+
+# Timeout (s) pojedynczego zapytania do usług geokodowania/routingu.
+ROUTING_HTTP_TIMEOUT = float(os.environ.get("ROUTING_HTTP_TIMEOUT", "10"))
+
+# MVP wspiera tylko komunikację publiczną, a darmowe API tras transitowych
+# (GTFS) nie jest tu dostępne bez płatnego klucza. Odległość liczymy realnie
+# (sieć dróg z OSRM), a czas dojazdu komunikacją publiczną szacujemy na
+# podstawie tej odległości: średnia prędkość "od drzwi do drzwi" (włącznie z
+# oczekiwaniem/przesiadkami) w polskich miastach + stały czas oczekiwania na
+# pierwszy przystanek. Łatwo podmienić na prawdziwe API transitowe (Google
+# Directions transit, OpenTripPlanner) bez zmiany interfejsu RoutingService.
+PUBLIC_TRANSPORT_AVG_SPEED_KMH = float(os.environ.get("PUBLIC_TRANSPORT_AVG_SPEED_KMH", "18"))
+PUBLIC_TRANSPORT_WAIT_MIN = float(os.environ.get("PUBLIC_TRANSPORT_WAIT_MIN", "5"))
+

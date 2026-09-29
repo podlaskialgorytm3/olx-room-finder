@@ -825,9 +825,27 @@ CREATE TABLE IF NOT EXISTS offers (
     status TEXT NOT NULL DEFAULT 'approved',   -- 'pending' | 'approved' | 'rejected'
     source TEXT NOT NULL DEFAULT 'olx',        -- 'olx' | 'landlord'
     owner_user_id INTEGER,                     -- id z `users`, tylko dla source='landlord'
-    rejection_reason TEXT                      -- powód odrzucenia przez administratora
+    rejection_reason TEXT,                     -- powód odrzucenia przez administratora
+    latitude REAL,                             -- współrzędne oferty - patrz uwaga niżej
+    longitude REAL
 );
 CREATE INDEX IF NOT EXISTS idx_offers_district ON offers(district);
+
+-- Cache wyników trasy "Sprawdź dojazd" (patrz backend/services/routing_service.py).
+-- Trasa NIGDY nie jest liczona podczas synchronizacji OLX - wyłącznie
+-- on-demand, gdy użytkownik otworzy szczegóły oferty i poda miejsce
+-- docelowe. Ten wpis to czysto opcjonalny cache, żeby nie wywoływać
+-- ponownie identycznego zapytania do usług geokodowania/routingu.
+CREATE TABLE IF NOT EXISTS offer_routes_cache (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    offer_id TEXT NOT NULL,
+    destination_query TEXT NOT NULL,  -- znormalizowany (lower/trim) tekst wpisany przez użytkownika
+    destination_label TEXT,           -- czytelna nazwa miejsca zwrócona przez geokodowanie
+    distance_km REAL NOT NULL,
+    duration_min INTEGER NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE(offer_id, destination_query)
+);
 
 -- Historia zdarzeń pojedynczych ofert (utworzenie / usunięcie / w przyszłości
 -- zmiana ceny). Rekordy nigdy nie są modyfikowane ani kasowane, więc pozwala
@@ -1029,6 +1047,7 @@ def init_db() -> None:
         _migrate_add_category_columns(conn)
         _migrate_add_apartment_columns_to_city_configs(conn)
         _migrate_add_area_m2_to_offers(conn)
+        _migrate_add_coordinates_to_offers(conn)
         conn.execute("CREATE INDEX IF NOT EXISTS idx_sync_runs_city ON sync_runs(city)")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_offers_category ON offers(category)")
         conn.commit()
@@ -1111,6 +1130,20 @@ def _migrate_add_area_m2_to_offers(conn: sqlite3.Connection) -> None:
     existing_columns = {row[1] for row in conn.execute("PRAGMA table_info(offers)").fetchall()}
     if "area_m2" not in existing_columns:
         conn.execute("ALTER TABLE offers ADD COLUMN area_m2 REAL")
+
+
+def _migrate_add_coordinates_to_offers(conn: sqlite3.Connection) -> None:
+    """Migracja dla baz utworzonych przed dodaniem współrzędnych oferty
+    (`latitude`/`longitude`) - potrzebnych przez funkcję "Sprawdź dojazd"
+    (patrz `backend/services/routing_service.py`). Kolumny zostają NULL dla
+    wszystkich ofert - współrzędne są dogeokodowywane leniwie (on-demand),
+    dopiero gdy użytkownik poprosi o obliczenie trasy, nigdy podczas
+    synchronizacji OLX."""
+    existing_columns = {row[1] for row in conn.execute("PRAGMA table_info(offers)").fetchall()}
+    if "latitude" not in existing_columns:
+        conn.execute("ALTER TABLE offers ADD COLUMN latitude REAL")
+    if "longitude" not in existing_columns:
+        conn.execute("ALTER TABLE offers ADD COLUMN longitude REAL")
 
 
 def ensure_city_configs() -> None:

@@ -51,6 +51,21 @@ offers = Table(
     Column("source", String, nullable=False, default="olx"),  # 'olx' | 'landlord'
     Column("owner_user_id", Integer),  # id z tabeli `users`, tylko dla source='landlord'
     Column("rejection_reason", Text),  # powód odrzucenia przez administratora (source='landlord')
+    Column("latitude", Float),  # współrzędne oferty - geokodowane leniwie, patrz routing_service.py
+    Column("longitude", Float),
+)
+
+offer_routes_cache = Table(
+    "offer_routes_cache",
+    metadata,
+    Column("id", Integer, primary_key=True),
+    Column("offer_id", String, nullable=False),
+    Column("destination_query", String, nullable=False),
+    Column("destination_label", String),
+    Column("distance_km", Float, nullable=False),
+    Column("duration_min", Integer, nullable=False),
+    Column("created_at", String),
+    UniqueConstraint("offer_id", "destination_query", name="uq_offer_routes_cache_offer_destination"),
 )
 
 offer_history = Table(
