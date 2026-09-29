@@ -242,6 +242,20 @@ class OfferRepository:
         self.db.commit()
         return result.rowcount > 0
 
+    def set_coordinates(self, offer_id: str, latitude: float, longitude: float) -> None:
+        """Zapisuje leniwie dogeokodowane współrzędne oferty (patrz
+        `backend/services/routing_service.py`) - wywoływane wyłącznie
+        on-demand, przy pierwszym żądaniu "Sprawdź dojazd" dla danej oferty,
+        nigdy podczas synchronizacji OLX. Nie zmienia `updated_at`, bo to nie
+        jest edycja treści ogłoszenia."""
+        stmt = (
+            sa_update(offers)
+            .where(offers.c.id == offer_id)
+            .values(latitude=latitude, longitude=longitude)
+        )
+        self.db.execute(stmt)
+        self.db.commit()
+
     def increment_views(self, offer_id: str) -> None:
         """Nabija jedno wyświetlenie oferty - wywoływane, gdy użytkownik
         otwiera stronę szczegółów danego pokoju. Wynik widoczny jest w
