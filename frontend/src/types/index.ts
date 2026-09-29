@@ -10,3 +10,4 @@ export * from "./landlord";
 export * from "./favorite";
 export * from "./saved-search";
 export * from "./notification";
+export * from "./route";

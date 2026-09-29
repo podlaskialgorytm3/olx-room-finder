@@ -11,3 +11,4 @@ export * from "./useLandlordOffers";
 export * from "./useFavorites";
 export * from "./useSavedSearches";
 export * from "./useNotifications";
+export * from "./useRouting";

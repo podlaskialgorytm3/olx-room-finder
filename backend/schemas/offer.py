@@ -32,6 +32,8 @@ class OfferOut(BaseModel):
     views_count: int = 0
     status: OfferStatus = "approved"
     source: OfferSource = "olx"
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
 
 
 class OfferDetailOut(OfferOut):

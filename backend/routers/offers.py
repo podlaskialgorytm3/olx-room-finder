@@ -11,6 +11,8 @@ from backend.dependencies import offer_filters_params
 from backend.repositories.favorite_repository import FavoriteRepository
 from backend.repositories.offer_repository import OfferFilters, OfferRepository
 from backend.schemas.offer import OfferDetailOut, OfferListOut, Pagination
+from backend.schemas.route import RouteRequestIn, RouteResultOut
+from backend.services.routing_service import RoutingError, get_route_for_offer
 
 router = APIRouter(prefix="/api/offers", tags=["offers"])
 
@@ -52,3 +54,27 @@ def get_offer(offer_id: str, db: Session = Depends(get_db)) -> OfferDetailOut:
     row["views_count"] = row.get("views_count", 0) + 1
     row["favorites_count"] = FavoriteRepository(db).count_for_offer(offer_id)
     return row
+
+
+@router.post("/{offer_id}/route", response_model=RouteResultOut)
+def get_offer_route(offer_id: str, payload: RouteRequestIn, db: Session = Depends(get_db)) -> RouteResultOut:
+    """Liczy on-demand (nigdy podczas synchronizacji OLX) czas dojazdu
+    komunikacją publiczną i odległość z lokalizacji oferty do miejsca
+    podanego przez użytkownika - patrz `backend/services/routing_service.py`."""
+    repo = OfferRepository(db)
+    row = repo.get_by_id(offer_id)
+    if row is None or row.get("status") != "approved":
+        raise HTTPException(status_code=404, detail=f"Oferta o id={offer_id} nie została znaleziona.")
+
+    try:
+        result = get_route_for_offer(offer_id, payload.destination, db)
+    except RoutingError as exc:
+        # Nigdy nie pokazujemy użytkownikowi szczegółów technicznych API
+        # geokodowania/routingu - tylko czytelny komunikat PL.
+        raise HTTPException(status_code=422, detail=exc.message) from exc
+
+    return RouteResultOut(
+        duration_min=result.duration_min,
+        distance_km=result.distance_km,
+        destination_label=result.destination_label,
+    )

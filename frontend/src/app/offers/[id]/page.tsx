@@ -13,6 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import { ErrorState } from "@/components/common/error-state";
 import { PhotoLightbox } from "@/components/offers/photo-lightbox";
+import { OfferRouteCheck } from "@/components/offers/offer-route-check";
 import { OfferEditDialog } from "@/components/admin/offer-edit-dialog";
 import { formatCity, formatPercent, formatPln, formatTriState, formatArea } from "@/lib/format";
 import { getPriceDiffColor } from "@/lib/price-diff-color";
@@ -206,6 +207,11 @@ export default function OfferDetailPage() {
           <p className="whitespace-pre-line text-sm leading-relaxed text-muted-foreground">{offer.description}</p>
         </div>
       )}
+
+      <Separator />
+
+      {/* Sprawdź dojazd */}
+      <OfferRouteCheck offerId={offer.id} />
 
       <Separator />
 

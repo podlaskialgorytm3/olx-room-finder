@@ -30,6 +30,8 @@ export interface Offer {
   views_count: number;
   status: OfferStatus;
   source: OfferSource;
+  latitude: number | null;
+  longitude: number | null;
 }
 
 export interface OfferDetail extends Offer {
