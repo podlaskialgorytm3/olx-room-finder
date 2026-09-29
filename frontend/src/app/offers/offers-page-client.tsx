@@ -11,6 +11,7 @@ import { TriStateSelect } from "@/components/filters/tri-state-select";
 import { OfferGrid } from "@/components/offers/offer-grid";
 import { SortSelect } from "@/components/offers/sort-select";
 import { PaginationControls } from "@/components/offers/pagination-controls";
+import { SaveSearchDialog } from "@/components/alerts/save-search-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -165,11 +166,14 @@ export function OffersPageClient() {
               )}
               <span>{isLoading ? "Ładowanie…" : `${total} ofert`}</span>
             </div>
-            <SortSelect
-              sort={sort as SortField}
-              order={order as SortOrder}
-              onChange={(newSort, newOrder) => updateQuery({ sort: newSort, order: newOrder }, false)}
-            />
+            <div className="flex items-center gap-2">
+              <SaveSearchDialog city={city} category={category} query={query} />
+              <SortSelect
+                sort={sort as SortField}
+                order={order as SortOrder}
+                onChange={(newSort, newOrder) => updateQuery({ sort: newSort, order: newOrder }, false)}
+              />
+            </div>
           </div>
 
           <OfferGrid
