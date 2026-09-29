@@ -3,10 +3,10 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { LayoutDashboard, LogOut, UserCircle, Heart, ListChecks } from "lucide-react";
+import { LayoutDashboard, LogOut, UserCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CategorySelect } from "@/components/filters/category-select";
-import { NotificationBell } from "@/components/notifications/notification-bell";
+import { TenantPanelMenu } from "@/components/layout/tenant-panel-menu";
 import { cn } from "@/lib/utils";
 import { useAdminAuthHydrated, useAdminAuthStore } from "@/lib/admin-auth-store";
 import { useUserAuthHydrated, useUserAuthStore } from "@/lib/user-auth-store";
@@ -89,14 +89,6 @@ export function Navbar() {
             </Link>
           ) : isUserLoggedIn ? (
             <div className="flex items-center gap-2">
-              <NotificationBell />
-              <Link
-                href="/alerts"
-                className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-              >
-                <ListChecks className="size-4" />
-                <span>Alerty</span>
-              </Link>
               {user!.role === "landlord" && (
                 <Link
                   href="/landlord"
@@ -106,15 +98,7 @@ export function Navbar() {
                   <span>Panel wynajmującego</span>
                 </Link>
               )}
-              {user!.role === "tenant" && (
-                <Link
-                  href="/favorites"
-                  className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-                >
-                  <Heart className="size-4" />
-                  <span>Ulubione</span>
-                </Link>
-              )}
+              {user!.role === "tenant" && <TenantPanelMenu />}
               <span className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground">
                 <UserCircle className="size-4" />
                 <span>{user!.full_name}</span>
