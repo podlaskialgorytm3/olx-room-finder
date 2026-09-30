@@ -37,6 +37,19 @@ export interface Offer {
    * Wspólne dla listy i szczegółów, żeby dało się pokazać "Dodano: …" na
    * karcie oferty bez pobierania pełnych szczegółów. */
   created_at: string | null;
+  /** Ostrzeżenia z systemu wykrywania podejrzanych/nietypowych ofert (patrz
+   * `backend/services/suspicious_offers_service.py`). Pusta lista = brak
+   * zastrzeżeń. To NIE jest stwierdzenie, że oferta jest oszustwem -
+   * wyłącznie sygnał "wymaga dodatkowej uwagi". */
+  warnings: OfferWarning[];
+}
+
+export type OfferWarningType = "LOW_PRICE" | "FREQUENT_PRICE_CHANGES" | "POSSIBLE_DUPLICATE";
+
+export interface OfferWarning {
+  type: OfferWarningType;
+  message: string;
+  details: Record<string, unknown> | null;
 }
 
 export interface OfferDetail extends Offer {

@@ -166,10 +166,18 @@ def _frequent_price_change_warnings(db: Session, offer_ids: list[str]) -> dict[s
     return result
 
 
-def _text_similarity(a: Optional[str], b: Optional[str]) -> float:
+def _text_similarity(a: Optional[str], b: Optional[str], threshold: float = 0.0) -> float:
+    """SequenceMatcher.ratio() z szybkim odrzuceniem: `quick_ratio()` jest
+    tanim (O(n+m)) górnym ograniczeniem dla `ratio()` (O(n*m)) - jeśli już
+    ono jest poniżej progu, prawdziwe podobieństwo też będzie, więc nie
+    liczymy drogiego `ratio()`. Istotne przy setkach ofert w jednej
+    dzielnicy (parowanie O(n^2))."""
     if not a or not b:
         return 0.0
-    return SequenceMatcher(None, a.strip().lower(), b.strip().lower()).ratio()
+    matcher = SequenceMatcher(None, a.strip().lower(), b.strip().lower())
+    if threshold and matcher.quick_ratio() < threshold:
+        return 0.0
+    return matcher.ratio()
 
 
 def _duplicate_warnings(rows: list[_OfferRow]) -> dict[str, dict]:
@@ -185,10 +193,12 @@ def _duplicate_warnings(rows: list[_OfferRow]) -> dict[str, dict]:
             if row_a.id in result:
                 continue
             for row_b in district_rows[i + 1:]:
-                title_sim = _text_similarity(row_a.title, row_b.title)
+                title_sim = _text_similarity(row_a.title, row_b.title, threshold=SUSPICIOUS_DUPLICATE_TITLE_SIMILARITY)
                 if title_sim < SUSPICIOUS_DUPLICATE_TITLE_SIMILARITY:
                     continue
-                description_sim = _text_similarity(row_a.description, row_b.description)
+                description_sim = _text_similarity(
+                    row_a.description, row_b.description, threshold=SUSPICIOUS_DUPLICATE_DESCRIPTION_SIMILARITY
+                )
                 if description_sim < SUSPICIOUS_DUPLICATE_DESCRIPTION_SIMILARITY:
                     continue
 

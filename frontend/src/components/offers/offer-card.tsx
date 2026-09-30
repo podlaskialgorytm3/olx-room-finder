@@ -3,7 +3,7 @@
 import type { MouseEvent } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ImageOff, MapPin, Wallet, Handshake, Heart, Ruler, CalendarDays } from "lucide-react";
+import { ImageOff, MapPin, Wallet, Handshake, Heart, Ruler, CalendarDays, TriangleAlert } from "lucide-react";
 import { toast } from "sonner";
 import type { Offer } from "@/types";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
@@ -122,6 +122,19 @@ export function OfferCard({ offer }: { offer: Offer }) {
             </div>
           )}
         </div>
+
+        {offer.warnings && offer.warnings.length > 0 && (
+          <div className="flex flex-col gap-1">
+            {offer.warnings.map((warning) => (
+              <span
+                key={warning.type}
+                className="inline-flex items-center gap-1.5 rounded-md bg-amber-100 px-2 py-1 text-xs font-medium text-amber-800 dark:bg-amber-950 dark:text-amber-400"
+              >
+                <TriangleAlert className="size-3.5 shrink-0" /> {warning.message}
+              </span>
+            ))}
+          </div>
+        )}
 
         <div className="mb-1 flex flex-wrap gap-1.5 text-xs">
           <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-1 text-muted-foreground">
