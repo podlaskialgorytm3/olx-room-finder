@@ -34,11 +34,11 @@ class OfferOut(BaseModel):
     source: OfferSource = "olx"
     latitude: Optional[float] = None
     longitude: Optional[float] = None
+    created_at: Optional[str] = None
 
 
 class OfferDetailOut(OfferOut):
     description: Optional[str] = None
-    created_at: Optional[str] = None
     updated_at: Optional[str] = None
     owner_user_id: Optional[int] = None
     rejection_reason: Optional[str] = None

@@ -32,11 +32,15 @@ export interface Offer {
   source: OfferSource;
   latitude: number | null;
   longitude: number | null;
+  /** Data utworzenia rekordu (ISO 8601) - dla ofert OLX to moment
+   * zsynchronizowania, dla ofert wynajmujących - moment dodania ogłoszenia.
+   * Wspólne dla listy i szczegółów, żeby dało się pokazać "Dodano: …" na
+   * karcie oferty bez pobierania pełnych szczegółów. */
+  created_at: string | null;
 }
 
 export interface OfferDetail extends Offer {
   description: string | null;
-  created_at: string | null;
   updated_at: string | null;
   owner_user_id: number | null;
   rejection_reason: string | null;
