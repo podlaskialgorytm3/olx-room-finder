@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, ExternalLink, Heart, ImageOff, MapPin, Pencil } from "lucide-react";
+import { ArrowLeft, ExternalLink, Heart, ImageOff, MapPin, Pencil, TriangleAlert } from "lucide-react";
 import { toast } from "sonner";
 import { useOffer, useFavoriteIds, useToggleFavorite } from "@/hooks";
 import { useDistrictStatisticsByName } from "@/hooks";
