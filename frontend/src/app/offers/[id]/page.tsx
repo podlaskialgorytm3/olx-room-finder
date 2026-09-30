@@ -15,7 +15,7 @@ import { ErrorState } from "@/components/common/error-state";
 import { PhotoLightbox } from "@/components/offers/photo-lightbox";
 import { OfferRouteCheck } from "@/components/offers/offer-route-check";
 import { OfferEditDialog } from "@/components/admin/offer-edit-dialog";
-import { formatCity, formatDateShort, formatPercent, formatPln, formatTriState, formatArea } from "@/lib/format";
+import { formatCity, formatDateShort, formatOfferAge, formatPercent, formatPln, formatTriState, formatArea } from "@/lib/format";
 import { getPriceDiffColor } from "@/lib/price-diff-color";
 import { ApiError } from "@/lib/api";
 import { useUserAuthHydrated, useUserAuthStore } from "@/lib/user-auth-store";
@@ -82,6 +82,7 @@ export default function OfferDetailPage() {
   }
 
   const photos = offer.photos ?? [];
+  const age = formatOfferAge(offer.created_at);
   // Porównanie z medianą dzielnicy ma opierać się na całkowitym koszcie
   // miesięcznym (czynsz + dodatkowe opłaty), a nie samej cenie bazowej -
   // to on odzwierciedla realny koszt najmu i jest spójny z resztą statystyk.
@@ -184,6 +185,7 @@ export default function OfferDetailPage() {
               <MapPin className="size-3.5" /> {formatCity(offer.city)}, {offer.district}
             </Badge>
           )}
+          {age && <Badge className={age.colorClassName}>{age.emoji} Oferta od {age.label}</Badge>}
           {offer.address && <span>{offer.address}</span>}
         </div>
       </div>

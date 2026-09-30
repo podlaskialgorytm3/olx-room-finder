@@ -81,6 +81,11 @@ export function OfferCard({ offer }: { offer: Offer }) {
             <MapPin className="size-3" /> {formatCity(offer.city)}
             {offer.district ? `, ${offer.district}` : ""}
           </Badge>
+          {age && (
+            <Badge className={cn("absolute left-2 bottom-2 shadow backdrop-blur-sm", age.colorClassName)}>
+              {age.emoji} Oferta od {age.label}
+            </Badge>
+          )}
           {isTenant && (
             <button
               type="button"
