@@ -6,6 +6,7 @@ import { QueryProvider } from "@/components/providers/query-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 import { Navbar } from "@/components/layout/navbar";
+import { CompareBar } from "@/components/offers/compare-bar";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -33,6 +34,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <TooltipProvider delayDuration={150}>
             <Navbar />
             <main className="flex-1">{children}</main>
+            <CompareBar />
             <Toaster position="bottom-right" />
           </TooltipProvider>
         </QueryProvider>
