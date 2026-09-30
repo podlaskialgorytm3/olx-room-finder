@@ -12,7 +12,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { EmptyState } from "@/components/common/empty-state";
 import { ErrorState } from "@/components/common/error-state";
 import { MAX_COMPARE_ITEMS, MIN_COMPARE_ITEMS, useCompareHydrated, useCompareStore } from "@/lib/compare-store";
-import { formatPln, formatArea, formatNumber } from "@/lib/format";
+import { formatPln, formatArea, formatDateShort, formatNumber } from "@/lib/format";
 import type { OfferCategory } from "@/types";
 
 const DASH = "—";
@@ -173,6 +173,10 @@ export default function ComparePage() {
               />
               <CompareRow label="Dzielnica" cells={queries.map((q) => orDash(q.data?.district))} />
               <CompareRow label="Typ" cells={queries.map((q) => (q.data?.category ? CATEGORY_LABELS[q.data.category] : DASH))} />
+              <CompareRow
+                label="Data dodania"
+                cells={queries.map((q) => (q.data?.created_at ? formatDateShort(q.data.created_at) : DASH))}
+              />
               <CompareRow
                 label={
                   <span className="inline-flex items-center gap-1.5">
