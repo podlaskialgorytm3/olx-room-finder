@@ -190,6 +190,24 @@ export default function OfferDetailPage() {
         </div>
       </div>
 
+      {/* Ostrzeżenia - system wykrywania podejrzanych/nietypowych ofert.
+          To NIE jest stwierdzenie, że oferta jest oszustwem - wyłącznie
+          sygnał, że warto zwrócić na nią dodatkową uwagę. */}
+      {offer.warnings.length > 0 && (
+        <div className="space-y-3 rounded-lg border border-amber-300 bg-amber-50 p-4 dark:border-amber-900 dark:bg-amber-950">
+          <h2 className="flex items-center gap-2 text-sm font-semibold text-amber-800 dark:text-amber-400">
+            <TriangleAlert className="size-4" /> Wymaga dodatkowej uwagi
+          </h2>
+          <ul className="space-y-3">
+            {offer.warnings.map((warning) => (
+              <li key={warning.type} className="text-sm">
+                <WarningDetail warning={warning} />
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       {/* Key facts */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <Fact label="Powierzchnia" value={formatArea(offer.area_m2)} />
