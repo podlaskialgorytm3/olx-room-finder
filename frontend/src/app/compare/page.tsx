@@ -1,12 +1,14 @@
 "use client";
 
+import type { ReactNode } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { ImageOff, Scale, Trash2, X } from "lucide-react";
+import { ImageOff, Info, Scale, Trash2, X } from "lucide-react";
 import { useOffer, useValueScore } from "@/hooks";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { EmptyState } from "@/components/common/empty-state";
 import { ErrorState } from "@/components/common/error-state";
 import { MAX_COMPARE_ITEMS, MIN_COMPARE_ITEMS, useCompareHydrated, useCompareStore } from "@/lib/compare-store";
@@ -18,6 +20,14 @@ const CATEGORY_LABELS: Record<OfferCategory, string> = {
   room: "Pokój",
   apartment: "Mieszkanie",
 };
+
+/** Ten sam opis co w `value-score-panel.tsx` - trzymamy w jednym miejscu
+ * znaczenie wskaźnika, żeby nie rozjechało się między stronami. */
+const VALUE_SCORE_EXPLANATION =
+  "To nie jest ocena jakości mieszkania — to wskaźnik statystyczny wyliczony na podstawie odchylenia " +
+  "całkowitego kosztu miesięcznego (czynsz + dodatkowe opłaty) od mediany/MAD dzielnicy, skorygowany o " +
+  "negocjowalność i wymaganą kaucję. Wyższa wartość oznacza koszt relatywnie korzystniejszy na tle dzielnicy, " +
+  "ale nie uwzględnia stanu technicznego, lokalizacji szczegółowej ani innych cech oferty.";
 
 function formatPlnOrDash(value: number | null | undefined): string {
   return value === null || value === undefined ? DASH : formatPln(value);
@@ -164,7 +174,25 @@ export default function ComparePage() {
               <CompareRow label="Dzielnica" cells={queries.map((q) => orDash(q.data?.district))} />
               <CompareRow label="Typ" cells={queries.map((q) => (q.data?.category ? CATEGORY_LABELS[q.data.category] : DASH))} />
               <CompareRow
-                label="Value Score"
+                label={
+                  <span className="inline-flex items-center gap-1.5">
+                    Value Score
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          type="button"
+                          className="text-muted-foreground hover:text-foreground"
+                          aria-label="Co oznacza value score?"
+                        >
+                          <Info className="size-3.5" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-xs whitespace-normal text-left">
+                        {VALUE_SCORE_EXPLANATION}
+                      </TooltipContent>
+                    </Tooltip>
+                  </span>
+                }
                 cells={queries.map((q) => {
                   const score = q.data ? valueScoreById.get(q.data.id) : undefined;
                   return score != null ? formatNumber(score) : DASH;
@@ -174,11 +202,21 @@ export default function ComparePage() {
           </Table>
         </div>
       )}
+
+      {!isLoading && !isError && (
+        <p className="flex items-start gap-2 rounded-lg border border-border bg-muted/30 px-4 py-3 text-xs text-muted-foreground">
+          <Info className="mt-0.5 size-4 shrink-0" />
+          <span>
+            <strong className="font-medium text-foreground">Co oznacza Value Score? </strong>
+            {VALUE_SCORE_EXPLANATION}
+          </span>
+        </p>
+      )}
     </div>
   );
 }
 
-function CompareRow({ label, cells }: { label: string; cells: string[] }) {
+function CompareRow({ label, cells }: { label: ReactNode; cells: string[] }) {
   return (
     <TableRow>
       <TableCell className="bg-muted/20 font-medium">{label}</TableCell>
