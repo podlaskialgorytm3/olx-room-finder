@@ -15,7 +15,7 @@ import { ErrorState } from "@/components/common/error-state";
 import { PhotoLightbox } from "@/components/offers/photo-lightbox";
 import { OfferRouteCheck } from "@/components/offers/offer-route-check";
 import { OfferEditDialog } from "@/components/admin/offer-edit-dialog";
-import { formatCity, formatPercent, formatPln, formatTriState, formatArea } from "@/lib/format";
+import { formatCity, formatDateShort, formatPercent, formatPln, formatTriState, formatArea } from "@/lib/format";
 import { getPriceDiffColor } from "@/lib/price-diff-color";
 import { ApiError } from "@/lib/api";
 import { useUserAuthHydrated, useUserAuthStore } from "@/lib/user-auth-store";
@@ -196,6 +196,7 @@ export default function OfferDetailPage() {
           <Fact label="Dodatkowe opłaty" value={offer.has_additional_cost === false ? "Brak" : formatPln(offer.additional_cost)} />
         )}
         <Fact label="Negocjowalna" value={formatTriState(offer.negotiable)} />
+        {offer.created_at && <Fact label="Data dodania" value={formatDateShort(offer.created_at)} />}
       </div>
 
       <Separator />
