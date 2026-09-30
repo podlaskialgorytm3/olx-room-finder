@@ -45,6 +45,17 @@ export function formatDate(value: string | null | undefined): string {
   }
 }
 
+/** Sama data (bez godziny) - używane tam, gdzie liczy się dzień dodania
+ * ogłoszenia, a nie dokładny czas (np. karta oferty). */
+export function formatDateShort(value: string | null | undefined): string {
+  if (!value) return "brak danych";
+  try {
+    return new Intl.DateTimeFormat("pl-PL", { dateStyle: "medium" }).format(new Date(value));
+  } catch {
+    return value;
+  }
+}
+
 /** Baza danych przechowuje miasto wielkimi literami (np. "WARSZAWA") - w UI
  * pokazujemy je w naturalnej formie ("Warszawa"). */
 export function formatCity(city: string | null | undefined): string {
