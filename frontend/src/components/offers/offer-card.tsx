@@ -8,10 +8,12 @@ import { toast } from "sonner";
 import type { Offer } from "@/types";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { formatArea, formatCity, formatPln, formatTriState } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { useFavoriteIds, useToggleFavorite } from "@/hooks";
 import { useUserAuthHydrated, useUserAuthStore } from "@/lib/user-auth-store";
+import { MAX_COMPARE_ITEMS, useCompareHydrated, useCompareStore } from "@/lib/compare-store";
 import { ApiError } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
@@ -27,6 +29,20 @@ export function OfferCard({ offer }: { offer: Offer }) {
   const favoriteIds = useFavoriteIds();
   const isFavorite = isTenant && (favoriteIds.data?.includes(offer.id) ?? false);
   const toggleFavorite = useToggleFavorite();
+
+  const compareHydrated = useCompareHydrated();
+  const compareIds = useCompareStore((state) => state.ids);
+  const toggleCompare = useCompareStore((state) => state.toggle);
+  const isCompared = compareHydrated && compareIds.includes(offer.id);
+  const compareLimitReached = compareHydrated && !isCompared && compareIds.length >= MAX_COMPARE_ITEMS;
+
+  const handleToggleCompare = () => {
+    if (compareLimitReached) {
+      toast.error(`Możesz porównać maksymalnie ${MAX_COMPARE_ITEMS} oferty.`);
+      return;
+    }
+    toggleCompare(offer.id);
+  };
 
   const handleToggleFavorite = (e: MouseEvent) => {
     e.preventDefault();
@@ -116,6 +132,22 @@ export function OfferCard({ offer }: { offer: Offer }) {
             <Handshake className="size-3.5" /> {formatTriState(offer.negotiable, "Negocjowalna", "Cena stała", "Nieznana")}
           </span>
         </div>
+
+        <label
+          onClick={(e) => e.stopPropagation()}
+          className={cn(
+            "flex items-center gap-2 text-xs font-medium text-muted-foreground",
+            compareLimitReached ? "cursor-not-allowed opacity-50" : "cursor-pointer",
+          )}
+        >
+          <Checkbox
+            checked={isCompared}
+            disabled={!compareHydrated || compareLimitReached}
+            onCheckedChange={handleToggleCompare}
+            aria-label="Porównaj tę ofertę"
+          />
+          Porównaj
+        </label>
       </CardContent>
 
       <CardFooter className="px-4 pt-3 pb-4">
