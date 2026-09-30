@@ -21,6 +21,7 @@ export function OfferCard({ offer }: { offer: Offer }) {
   const photo = offer.photos?.[0];
 
   const isNegotiable = offer.negotiable === true;
+  const age = formatOfferAge(offer.created_at);
 
   const hydrated = useUserAuthHydrated();
   const user = useUserAuthStore((state) => state.user);
