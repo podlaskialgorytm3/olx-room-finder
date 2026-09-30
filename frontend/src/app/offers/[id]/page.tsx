@@ -2,11 +2,13 @@
 
 import { useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, ExternalLink, Heart, ImageOff, MapPin, Pencil, TriangleAlert } from "lucide-react";
 import { toast } from "sonner";
 import { useOffer, useFavoriteIds, useToggleFavorite } from "@/hooks";
 import { useDistrictStatisticsByName } from "@/hooks";
+import type { OfferWarning } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -287,4 +289,56 @@ function Fact({ label, value, color }: { label: string; value: string; color?: {
       </p>
     </div>
   );
+}
+
+function WarningDetail({ warning }: { warning: OfferWarning }) {
+  const details = warning.details ?? {};
+
+  if (warning.type === "LOW_PRICE") {
+    const price = details.price as number | undefined;
+    const median = details.median as number | undefined;
+    const differencePercent = details.difference_percent as number | undefined;
+    return (
+      <div className="space-y-1">
+        <p className="font-medium text-amber-900 dark:text-amber-300">Nietypowa cena</p>
+        <div className="grid grid-cols-1 gap-x-6 gap-y-0.5 text-amber-800 dark:text-amber-400 sm:grid-cols-3">
+          <span>Cena oferty: {formatPln(price ?? null)}</span>
+          <span>Mediana podobnych ofert: {formatPln(median ?? null)}</span>
+          <span>Różnica: {formatPercent(differencePercent ?? null)}</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (warning.type === "FREQUENT_PRICE_CHANGES") {
+    const changesCount = details.changes_count as number | undefined;
+    const windowDays = details.window_days as number | undefined;
+    return (
+      <div className="space-y-1">
+        <p className="font-medium text-amber-900 dark:text-amber-300">Częste zmiany ceny</p>
+        <p className="text-amber-800 dark:text-amber-400">
+          Cena zmieniła się {changesCount ?? "?"} razy w ciągu ostatnich {windowDays ?? "?"} dni.
+        </p>
+      </div>
+    );
+  }
+
+  if (warning.type === "POSSIBLE_DUPLICATE") {
+    const duplicateOfferId = details.duplicate_offer_id as string | undefined;
+    return (
+      <div className="space-y-1">
+        <p className="font-medium text-amber-900 dark:text-amber-300">Możliwy duplikat</p>
+        <p className="text-amber-800 dark:text-amber-400">
+          Znaleziono bardzo podobną ofertę (tytuł, dzielnica, opis).{" "}
+          {duplicateOfferId && (
+            <Link href={`/offers/${duplicateOfferId}`} className="underline underline-offset-2">
+              Zobacz podobną ofertę
+            </Link>
+          )}
+        </p>
+      </div>
+    );
+  }
+
+  return <p className="text-amber-800 dark:text-amber-400">{warning.message}</p>;
 }
