@@ -3,13 +3,13 @@
 import type { MouseEvent } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ImageOff, MapPin, Wallet, Handshake, Heart, Ruler } from "lucide-react";
+import { ImageOff, MapPin, Wallet, Handshake, Heart, Ruler, CalendarDays } from "lucide-react";
 import { toast } from "sonner";
 import type { Offer } from "@/types";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { formatArea, formatCity, formatPln, formatTriState } from "@/lib/format";
+import { formatArea, formatCity, formatDateShort, formatPln, formatTriState } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { useFavoriteIds, useToggleFavorite } from "@/hooks";
 import { useUserAuthHydrated, useUserAuthStore } from "@/lib/user-auth-store";
