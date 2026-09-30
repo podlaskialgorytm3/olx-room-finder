@@ -131,6 +131,11 @@ export function OfferCard({ offer }: { offer: Offer }) {
           >
             <Handshake className="size-3.5" /> {formatTriState(offer.negotiable, "Negocjowalna", "Cena stała", "Nieznana")}
           </span>
+          {offer.created_at && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-1 text-muted-foreground">
+              <CalendarDays className="size-3.5" /> Dodano: {formatDateShort(offer.created_at)}
+            </span>
+          )}
         </div>
 
         <label
