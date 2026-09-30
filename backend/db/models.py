@@ -53,6 +53,7 @@ offers = Table(
     Column("rejection_reason", Text),  # powód odrzucenia przez administratora (source='landlord')
     Column("latitude", Float),  # współrzędne oferty - geokodowane leniwie, patrz routing_service.py
     Column("longitude", Float),
+    Column("added_date", String),  # dzień dodania oferty (YYYY-MM-DD)
 )
 
 offer_routes_cache = Table(

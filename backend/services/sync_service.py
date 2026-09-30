@@ -827,7 +827,8 @@ CREATE TABLE IF NOT EXISTS offers (
     owner_user_id INTEGER,                     -- id z `users`, tylko dla source='landlord'
     rejection_reason TEXT,                     -- powód odrzucenia przez administratora
     latitude REAL,                             -- współrzędne oferty - patrz uwaga niżej
-    longitude REAL
+    longitude REAL,
+    added_date TEXT                            -- dzień dodania oferty (YYYY-MM-DD)
 );
 CREATE INDEX IF NOT EXISTS idx_offers_district ON offers(district);
 
@@ -1048,6 +1049,7 @@ def init_db() -> None:
         _migrate_add_apartment_columns_to_city_configs(conn)
         _migrate_add_area_m2_to_offers(conn)
         _migrate_add_coordinates_to_offers(conn)
+        _migrate_add_added_date_to_offers(conn)
         conn.execute("CREATE INDEX IF NOT EXISTS idx_sync_runs_city ON sync_runs(city)")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_offers_category ON offers(category)")
         conn.commit()
@@ -1144,6 +1146,17 @@ def _migrate_add_coordinates_to_offers(conn: sqlite3.Connection) -> None:
         conn.execute("ALTER TABLE offers ADD COLUMN latitude REAL")
     if "longitude" not in existing_columns:
         conn.execute("ALTER TABLE offers ADD COLUMN longitude REAL")
+
+
+def _migrate_add_added_date_to_offers(conn: sqlite3.Connection) -> None:
+    """Migracja dla baz utworzonych przed dodaniem kolumny `added_date`
+    (dzień dodania oferty, format YYYY-MM-DD, bez godziny). Oferty, które
+    nie mają jeszcze ustawionej wartości (czyli wszystkie w momencie
+    wprowadzenia tej migracji) dostają domyślnie datę 2026-09-29."""
+    existing_columns = {row[1] for row in conn.execute("PRAGMA table_info(offers)").fetchall()}
+    if "added_date" not in existing_columns:
+        conn.execute("ALTER TABLE offers ADD COLUMN added_date TEXT")
+    conn.execute("UPDATE offers SET added_date = '2026-09-29' WHERE added_date IS NULL OR added_date = ''")
 
 
 def ensure_city_configs() -> None:
