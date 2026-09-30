@@ -4,6 +4,8 @@ from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict
 
+from backend.schemas.analysis import OfferWarningOut
+
 OfferStatus = Literal["pending", "approved", "rejected"]
 OfferSource = Literal["olx", "landlord"]
 OfferCategory = Literal["room", "apartment"]
@@ -35,6 +37,11 @@ class OfferOut(BaseModel):
     latitude: Optional[float] = None
     longitude: Optional[float] = None
     created_at: Optional[str] = None
+    # Ostrzeżenia wykryte przez system oznaczania podejrzanych ofert (patrz
+    # backend/services/suspicious_offers_service.py). Pusta lista = brak
+    # zastrzeżeń. Domyślnie [] - endpointy, które nie liczą ostrzeżeń
+    # (np. panel administratora), po prostu nie muszą go ustawiać.
+    warnings: list[OfferWarningOut] = []
 
 
 class OfferDetailOut(OfferOut):

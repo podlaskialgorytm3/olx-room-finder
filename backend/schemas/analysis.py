@@ -1,8 +1,26 @@
 from __future__ import annotations
 
-from typing import Optional
+from typing import Literal, Optional
 
 from pydantic import BaseModel
+
+
+WarningType = Literal["LOW_PRICE", "FREQUENT_PRICE_CHANGES", "POSSIBLE_DUPLICATE"]
+
+
+class OfferWarningOut(BaseModel):
+    type: WarningType
+    message: str
+    details: Optional[dict] = None
+
+
+class SuspiciousOfferOut(BaseModel):
+    id: str
+    title: str
+    city: Optional[str] = None
+    district: Optional[str] = None
+    price: Optional[float] = None
+    warnings: list[OfferWarningOut] = []
 
 
 class PriceVsDistrictOut(BaseModel):

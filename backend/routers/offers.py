@@ -12,6 +12,7 @@ from backend.repositories.favorite_repository import FavoriteRepository
 from backend.repositories.offer_repository import OfferFilters, OfferRepository
 from backend.schemas.offer import OfferDetailOut, OfferListOut, Pagination
 from backend.schemas.route import RouteRequestIn, RouteResultOut
+from backend.services import suspicious_offers_service
 from backend.services.routing_service import RoutingError, get_route_for_offer
 
 router = APIRouter(prefix="/api/offers", tags=["offers"])
@@ -36,6 +37,13 @@ def list_offers(
     rows, total = repo.search(filters, sort=sort, order=order, page=page, limit=limit)
     total_pages = (total + limit - 1) // limit if total else 0
 
+    # Ostrzeżenia liczone jednym przejściem po całym zbiorze zatwierdzonych
+    # ofert (patrz suspicious_offers_service) - unika N osobnych zapytań na
+    # stronę wyników.
+    warnings_by_offer = suspicious_offers_service.compute_warnings_for_all_offers(db)
+    for row in rows:
+        row["warnings"] = warnings_by_offer.get(row["id"], [])
+
     return OfferListOut(
         data=rows,
         pagination=Pagination(page=page, limit=limit, total=total, total_pages=total_pages),
@@ -53,6 +61,7 @@ def get_offer(offer_id: str, db: Session = Depends(get_db)) -> OfferDetailOut:
     repo.increment_views(offer_id)
     row["views_count"] = row.get("views_count", 0) + 1
     row["favorites_count"] = FavoriteRepository(db).count_for_offer(offer_id)
+    row["warnings"] = suspicious_offers_service.get_warnings_for_offer(db, offer_id)
     return row
 
 

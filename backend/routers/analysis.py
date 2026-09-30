@@ -13,9 +13,11 @@ from backend.schemas.analysis import (
     InitialCostOut,
     OutliersOut,
     PriceVsDistrictOut,
+    SuspiciousOfferOut,
     ValueScoreOut,
 )
 from backend.services import analysis_service
+from backend.services import suspicious_offers_service
 
 router = APIRouter(prefix="/api/analysis", tags=["analysis"])
 
@@ -83,3 +85,12 @@ def get_value_score(
 ) -> list[ValueScoreOut]:
     repo = OfferRepository(db)
     return analysis_service.value_score(repo, filters)
+
+
+@router.get("/suspicious", response_model=list[SuspiciousOfferOut])
+def get_suspicious_offers(db: Session = Depends(get_db)) -> list[SuspiciousOfferOut]:
+    """Lista zatwierdzonych ofert oznaczonych co najmniej jednym
+    ostrzeżeniem (patrz backend/services/suspicious_offers_service.py).
+    Feature nie stwierdza, że oferta jest oszustwem - jedynie wskazuje
+    oferty wymagające dodatkowej uwagi użytkownika."""
+    return suspicious_offers_service.get_suspicious_offers(db)

@@ -36,6 +36,26 @@ VALUE_SCORE_WEIGHTS = {
 # (poniżej tego progu statystyki dzielnicy są zbyt niestabilne).
 MIN_DISTRICT_SAMPLE_SIZE = 5
 
+# --- Wykrywanie podejrzanych ofert (patrz backend/services/suspicious_offers_service.py) ---
+# Minimalna liczba podobnych ofert (to samo miasto/kategoria/dzielnica),
+# żeby uznać medianę za wiarygodną podstawę do oznaczenia niskiej ceny.
+# Poniżej tego progu nigdy nie oznaczamy oferty na podstawie ceny.
+SUSPICIOUS_MIN_SIMILAR_OFFERS = 5
+
+# Próg "podejrzanie niskiej ceny" - o ile procent (ułamek) cena oferty musi
+# być niższa od mediany podobnych ofert, żeby ją oznaczyć (0.4 = 40%).
+SUSPICIOUS_PRICE_DROP_THRESHOLD = 0.4
+
+# "Częste zmiany ceny": co najmniej tyle zdarzeń 'price_changed' w
+# `offer_history` w oknie czasowym poniżej.
+SUSPICIOUS_PRICE_CHANGE_MIN_COUNT = 3
+SUSPICIOUS_PRICE_CHANGE_WINDOW_DAYS = 7
+
+# Wykrywanie potencjalnych duplikatów - progi podobieństwa tekstu (0-1,
+# SequenceMatcher.ratio()) tytułu i opisu; dzielnica musi być identyczna.
+SUSPICIOUS_DUPLICATE_TITLE_SIMILARITY = 0.85
+SUSPICIOUS_DUPLICATE_DESCRIPTION_SIMILARITY = 0.85
+
 # Czy backend ma automatycznie uruchamiać w tle harmonogram codziennej
 # synchronizacji ofert OLX (patrz backend/services/sync_service.py). Wyłącz
 # ustawiając zmienną środowiskową ENABLE_SYNC_SCHEDULER=false (np. w testach).
