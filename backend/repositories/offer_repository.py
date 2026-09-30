@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 import uuid
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
 
 from sqlalchemy import Select, func, or_, select
@@ -42,6 +42,7 @@ class OfferFilters:
     search: Optional[str] = None
     status: Optional[str] = None  # 'pending' | 'approved' | 'rejected' - None = brak filtra
     owner_user_id: Optional[int] = None  # ograniczenie do ofert danego wynajmującego
+    max_age_hours: Optional[int] = None  # "wiek oferty" - tylko oferty utworzone w ciągu ostatnich N godzin
 
 
 SORTABLE_COLUMNS = {
@@ -103,6 +104,16 @@ def _apply_filters(stmt: Select, filters: OfferFilters) -> Select:
         stmt = stmt.where(offers.c.status == filters.status)
     if filters.owner_user_id is not None:
         stmt = stmt.where(offers.c.owner_user_id == filters.owner_user_id)
+    if filters.max_age_hours is not None:
+        cutoff = (datetime.now(timezone.utc) - timedelta(hours=filters.max_age_hours)).isoformat()
+        # `created_at` bywa zapisywane w dwóch formatach: "YYYY-MM-DD HH:MM:SS"
+        # (SQLite `datetime('now')` przy synchronizacji OLX) oraz
+        # "YYYY-MM-DDTHH:MM:SS.ffffff+00:00" (oferty wynajmujących, patrz
+        # `OfferRepository.create`). Normalizujemy separator na "T", żeby
+        # porównanie leksykograficzne ze `cutoff` (ISO 8601) działało tak samo
+        # dla obu formatów.
+        normalized_created_at = func.replace(offers.c.created_at, " ", "T")
+        stmt = stmt.where(offers.c.created_at.is_not(None), normalized_created_at >= cutoff)
     return stmt
 
 

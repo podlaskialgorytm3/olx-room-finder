@@ -1,7 +1,17 @@
 import type { OffersQuery, SortField, SortOrder } from "@/types";
 
 const BOOL_KEYS = ["negotiable", "hasAdditionalCost", "hasDeposit", "hasDepositCost"] as const;
-const NUM_KEYS = ["minPrice", "maxPrice", "minTotalMonthlyCost", "maxTotalMonthlyCost", "minAreaM2", "maxAreaM2", "page", "limit"] as const;
+const NUM_KEYS = [
+  "minPrice",
+  "maxPrice",
+  "minTotalMonthlyCost",
+  "maxTotalMonthlyCost",
+  "minAreaM2",
+  "maxAreaM2",
+  "maxAgeHours",
+  "page",
+  "limit",
+] as const;
 
 /** Parses a Next.js `URLSearchParams`-like record into a typed `OffersQuery`. */
 export function parseOffersQuery(params: URLSearchParams): OffersQuery {

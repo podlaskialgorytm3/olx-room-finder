@@ -5,6 +5,7 @@ import type { SortField, SortOrder } from "@/types";
 
 const SORT_OPTIONS: { value: `${SortField}:${SortOrder}`; label: string }[] = [
   { value: "created_at:desc", label: "Najnowsze" },
+  { value: "created_at:asc", label: "Najstarsze" },
   { value: "total_monthly_cost:asc", label: "Całkowity koszt ↑" },
   { value: "total_monthly_cost:desc", label: "Całkowity koszt ↓" },
   { value: "price:asc", label: "Cena ↑" },

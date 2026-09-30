@@ -17,6 +17,7 @@ function filtersToQuery(filters: OfferFilters): Record<string, unknown> {
     hasDeposit: filters.hasDeposit,
     hasDepositCost: filters.hasDepositCost,
     search: filters.search,
+    maxAgeHours: filters.maxAgeHours,
   };
 }
 

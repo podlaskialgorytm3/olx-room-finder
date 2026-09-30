@@ -80,6 +80,8 @@ export interface OfferFilters {
   hasDeposit?: boolean;
   hasDepositCost?: boolean;
   search?: string;
+  /** Filtr wieku oferty - tylko oferty utworzone w ciągu ostatnich N godzin. */
+  maxAgeHours?: number;
 }
 
 export interface OffersQuery extends OfferFilters {

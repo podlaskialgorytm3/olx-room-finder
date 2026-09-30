@@ -9,7 +9,7 @@ import type { Offer } from "@/types";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { formatArea, formatCity, formatDateShort, formatPln, formatTriState } from "@/lib/format";
+import { formatArea, formatCity, formatDateShort, formatOfferAge, formatPln, formatTriState } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { useFavoriteIds, useToggleFavorite } from "@/hooks";
 import { useUserAuthHydrated, useUserAuthStore } from "@/lib/user-auth-store";

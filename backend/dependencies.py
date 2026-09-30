@@ -32,6 +32,9 @@ def offer_filters_params(
     hasDeposit: Optional[bool] = Query(None),
     hasDepositCost: Optional[bool] = Query(None),
     search: Optional[str] = Query(None, min_length=1, description="Szuka w title/description/address"),
+    maxAgeHours: Optional[int] = Query(
+        None, ge=1, description="Filtr wieku oferty - tylko oferty utworzone w ciągu ostatnich N godzin"
+    ),
 ) -> OfferFilters:
     return OfferFilters(
         city=city.strip().upper() if city else None,
@@ -48,6 +51,7 @@ def offer_filters_params(
         has_deposit=hasDeposit,
         has_deposit_cost=hasDepositCost,
         search=search,
+        max_age_hours=maxAgeHours,
     )
 
 

@@ -56,6 +56,46 @@ export function formatDateShort(value: string | null | undefined): string {
   }
 }
 
+export interface OfferAge {
+  /** Czytelny opis wieku, np. "< 1 godziny", "3 godziny", "2 dni". */
+  label: string;
+  /** Klasy Tailwind (tekst + tło) odzwierciedlające świeżość oferty:
+   * zielony < 24h, żółty 1-7 dni, czerwony > 7 dni. */
+  colorClassName: string;
+  emoji: "🟢" | "🟡" | "🔴";
+}
+
+/** Oblicza wiek oferty na podstawie `created_at` względem aktualnego czasu -
+ * liczone dynamicznie w UI, nie zapisywane w bazie (patrz `docs/age-of-listing`).
+ * Zwraca `null`, gdy `created_at` jest nieznane. */
+export function formatOfferAge(createdAt: string | null | undefined): OfferAge | null {
+  if (!createdAt) return null;
+  const created = new Date(createdAt);
+  if (Number.isNaN(created.getTime())) return null;
+
+  const diffMs = Date.now() - created.getTime();
+  const diffHours = diffMs / (1000 * 60 * 60);
+  const diffDays = Math.floor(diffHours / 24);
+
+  let label: string;
+  if (diffHours < 1) {
+    label = "< 1 godziny";
+  } else if (diffHours < 24) {
+    const hours = Math.floor(diffHours);
+    label = `${hours} ${hours === 1 ? "godzina" : hours < 5 ? "godziny" : "godzin"}`;
+  } else {
+    label = `${diffDays} ${diffDays === 1 ? "dzień" : "dni"}`;
+  }
+
+  if (diffHours < 24) {
+    return { label, colorClassName: "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-400", emoji: "🟢" };
+  }
+  if (diffDays <= 7) {
+    return { label, colorClassName: "bg-yellow-100 text-yellow-700 dark:bg-yellow-950 dark:text-yellow-400", emoji: "🟡" };
+  }
+  return { label, colorClassName: "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-400", emoji: "🔴" };
+}
+
 /** Baza danych przechowuje miasto wielkimi literami (np. "WARSZAWA") - w UI
  * pokazujemy je w naturalnej formie ("Warszawa"). */
 export function formatCity(city: string | null | undefined): string {

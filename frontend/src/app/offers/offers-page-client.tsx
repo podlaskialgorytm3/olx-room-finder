@@ -8,6 +8,7 @@ import { DistrictSelect } from "@/components/filters/district-select";
 import { CitySelect } from "@/components/filters/city-select";
 import { RangeSliderField } from "@/components/filters/range-slider-field";
 import { TriStateSelect } from "@/components/filters/tri-state-select";
+import { AgeFilterSelect } from "@/components/filters/age-filter-select";
 import { OfferGrid } from "@/components/offers/offer-grid";
 import { SortSelect } from "@/components/offers/sort-select";
 import { PaginationControls } from "@/components/offers/pagination-controls";
@@ -150,6 +151,10 @@ export function OffersPageClient() {
                 onChange={(negotiable) => updateQuery({ negotiable })}
                 yesLabel="Negocjowalna"
                 noLabel="Cena stała"
+              />
+              <AgeFilterSelect
+                value={query.maxAgeHours}
+                onChange={(maxAgeHours) => updateQuery({ maxAgeHours })}
               />
             </CardContent>
           </Card>
